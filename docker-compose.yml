@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16.4
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
+      POSTGRES_DB: saas-starter-kit
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d saas-starter-kit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=postgresql://admin:admin@db:5432/saas-starter-kit
+    restart: always
+    ports:
+      - 4002:4002
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@db:5432/saas-starter-kit
+      - NEXTAUTH_URL=http://localhost:4002
+      - NEXTAUTH_SECRET=rZTFtfNuSMajLnfFrWT2PZ3lX8WZv7W/Xs2H8hkEY6g=
+      - APP_URL=http://localhost:4002
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
