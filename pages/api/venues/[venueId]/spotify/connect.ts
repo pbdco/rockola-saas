@@ -48,12 +48,18 @@ const handleGET = async (req: NextApiRequest, res: NextApiResponse) => {
   const appUrl = env.appUrl;
 
   // Build Spotify authorization URL with venue-specific credentials
+  // Required scopes for full functionality:
+  // - Playback control (queue, skip, play)
+  // - Playlist reading (for Playlist Mode)
+  // - Playlist modification (for adding tracks to playlists)
   const scopes = [
     'user-read-playback-state',
     'user-modify-playback-state',
     'user-read-currently-playing',
     'playlist-read-private',
     'playlist-read-collaborative',
+    'playlist-modify-public',    // Required to add tracks to public playlists
+    'playlist-modify-private',    // Required to add tracks to private playlists
   ].join(' ');
 
   // Use a single static callback URL for all venues

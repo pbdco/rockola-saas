@@ -490,7 +490,9 @@ const SPOTIFY_SCOPES = [
   'user-modify-playback-state',
   'user-read-currently-playing',
   'playlist-read-private',
-  'playlist-read-collaborative'
+  'playlist-read-collaborative',
+  'playlist-modify-public',    // Required to add tracks to public playlists
+  'playlist-modify-private'    // Required to add tracks to private playlists
 ];
 ```
 
