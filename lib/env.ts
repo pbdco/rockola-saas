@@ -129,6 +129,8 @@ const env = {
 
   n8n: {
     webhookUrl: process.env.N8N_WEBHOOK_URL || '',
+    apiKey: process.env.N8N_API_KEY || '',
+    webhookSecret: process.env.N8N_WEBHOOK_SECRET || '',
   },
 };
 
