@@ -8,9 +8,31 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
-  OWNER
-  MEMBER
+  SUPERADMIN
+  USER
+}
+
+enum VenueMode {
+  QUEUE
+  PLAYLIST
+  AUTOMATION
+}
+
+enum RequestStatus {
+  PENDING
+  PAID
+  QUEUED
+  PLAYING
+  PLAYED
+  SKIPPED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
 }
 
 model Account {
@@ -58,68 +80,19 @@ model User {
   emailVerified          DateTime?
   password               String?
   image                  String?
+  role                   Role      @default(USER)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @default(now())
   invalid_login_attempts Int       @default(0)
   lockedAt               DateTime?
 
-  teamMembers TeamMember[]
-  accounts    Account[]
-  sessions    Session[]
-  invitations Invitation[]
+  accounts Account[]
+  sessions Session[]
+  apiKeys  ApiKey[]
+  venues   Venue[]
 }
 
-model Team {
-  id              String       @id @default(uuid())
-  name            String
-  slug            String       @unique
-  domain          String?      @unique
-  defaultRole     Role         @default(MEMBER)
-  billingId       String?
-  billingProvider String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @default(now())
-  members         TeamMember[]
-  invitations     Invitation[]
-  apiKeys         ApiKey[]
-
-  @@index([billingId])
-}
-
-model TeamMember {
-  id        String   @id @default(uuid())
-  teamId    String
-  userId    String
-  role      Role     @default(MEMBER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, userId])
-  @@index([userId])
-}
-
-model Invitation {
-  id             String   @id @default(uuid())
-  teamId         String
-  email          String?
-  role           Role     @default(MEMBER)
-  token          String   @unique
-  expires        DateTime
-  invitedBy      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now())
-  sentViaEmail   Boolean  @default(true)
-  allowedDomains String[] @default([])
-
-  user User @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, email])
-  @@index([email])
-}
+// Team models removed - venues are now owned directly by users
 
 model PasswordReset {
   id        Int      @id @default(autoincrement())
@@ -133,16 +106,16 @@ model PasswordReset {
 model ApiKey {
   id         String    @id @default(uuid())
   name       String
-  teamId     String
+  userId     String
   hashedKey  String    @unique
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @default(now())
   expiresAt  DateTime?
   lastUsedAt DateTime?
 
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([teamId])
+  @@index([userId])
 }
 
 model Subscription {
@@ -182,6 +155,83 @@ model Price {
   created       DateTime
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model Venue {
+  id                    String         @id @default(uuid())
+  userId                String
+  name                  String
+  slug                  String         @unique
+  address               String?
+  mode                  VenueMode      @default(QUEUE)
+  spotifyClientId       String?
+  spotifyClientSecret   String?        @db.Text
+  spotifyUserId         String?
+  spotifyDisplayName    String?
+  spotifyAccessToken    String?        @db.Text
+  spotifyRefreshToken   String?        @db.Text
+  spotifyTokenExpiresAt DateTime?
+  n8nCredentialId       String?
+  pricingEnabled        Boolean        @default(false)
+  pricePerSong          Decimal?       @db.Decimal(10, 2)
+  currency              String?        @default("USD")
+  qrCodeUrl             String?
+  isActive              Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songRequests  SongRequest[]
+  payments      Payment[]
+
+  @@index([userId])
+}
+
+model SongRequest {
+  id                String        @id @default(uuid())
+  venueId           String
+  patronIdentifier  String?
+  spotifyTrackId    String?
+  trackName         String
+  artistName        String
+  albumName         String?
+  trackUri          String?
+  status            RequestStatus @default(PENDING)
+  price             Decimal?      @db.Decimal(10, 2)
+  currency          String?       @default("USD")
+  queuePosition     Int?
+  requestedAt       DateTime      @default(now())
+  queuedAt          DateTime?
+  playedAt          DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  venue    Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  payment  Payment? @relation("SongRequestPayment")
+
+  @@index([venueId])
+  @@index([status])
+}
+
+model Payment {
+  id               String         @id @default(uuid())
+  songRequestId    String         @unique
+  venueId          String
+  providerPaymentId String?
+  amount           Decimal        @db.Decimal(10, 2)
+  currency         String         @default("USD")
+  status           PaymentStatus  @default(PENDING)
+  venueRevenue     Decimal?       @db.Decimal(10, 2)
+  platformFee      Decimal?       @db.Decimal(10, 2)
+  processingFee    Decimal?       @db.Decimal(10, 2)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  songRequest SongRequest @relation("SongRequestPayment", fields: [songRequestId], references: [id], onDelete: Cascade)
+  venue       Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@index([status])
 }
 
 model jackson_store {

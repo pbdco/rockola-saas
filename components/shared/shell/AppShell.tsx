@@ -1,15 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loading } from '@/components/shared';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import React from 'react';
 import Header from './Header';
 import Drawer from './Drawer';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 
 export default function AppShell({ children }) {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Check if user is blocked or deleted (session.user.id will be undefined)
+  useEffect(() => {
+    if (status === 'authenticated' && session && !session.user?.id) {
+      // User was blocked or deleted, sign them out
+      signOut({ callbackUrl: '/auth/login' });
+    }
+  }, [status, session]);
 
   if (status === 'loading') {
     return <Loading />;
@@ -18,6 +26,11 @@ export default function AppShell({ children }) {
   if (status === 'unauthenticated') {
     router.push('/auth/login');
     return;
+  }
+
+  // If authenticated but no user ID, show loading while sign out happens
+  if (status === 'authenticated' && session && !session.user?.id) {
+    return <Loading />;
   }
 
   return (

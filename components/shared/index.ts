@@ -9,3 +9,6 @@ export { default as WithLoadingAndError } from './WithLoadingAndError';
 export { default as InputWithCopyButton } from './InputWithCopyButton';
 export { default as CopyToClipboardButton } from './CopyToClipboardButton';
 export { default as Checkbox } from './Checkbox';
+export { AccessControl } from './AccessControl';
+export { default as Modal } from './Modal';
+export { default as ConfirmationDialog } from './ConfirmationDialog';

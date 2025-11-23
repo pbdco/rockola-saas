@@ -3,7 +3,7 @@ import type { SessionStrategy } from 'next-auth';
 const env = {
   databaseUrl: `${process.env.DATABASE_URL}`,
   appUrl: `${process.env.APP_URL}`,
-  redirectIfAuthenticated: '/dashboard',
+  redirectIfAuthenticated: '/venues',
   securityHeadersEnabled: process.env.SECURITY_HEADERS_ENABLED ?? false,
 
   // SMTP configuration for NextAuth
@@ -105,6 +105,7 @@ const env = {
             process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET
           ),
     deleteTeam: process.env.FEATURE_TEAM_DELETION !== 'false',
+    venues: process.env.FEATURE_TEAM_VENUES !== 'false',
   },
 
   recaptcha: {
@@ -119,6 +120,15 @@ const env = {
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  },
+
+  spotify: {
+    clientId: process.env.SPOTIFY_CLIENT_ID || '',
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+  },
+
+  n8n: {
+    webhookUrl: process.env.N8N_WEBHOOK_URL || '',
   },
 };
 

@@ -38,6 +38,7 @@ export const maxLengthPolicies = {
   webhookDescription: 100,
   webhookEndpoint: 2083,
   memberId: 64,
+  venueId: 64,
   eventType: 50,
   eventTypes: eventTypes.length,
   endpointId: 64,

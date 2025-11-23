@@ -12,7 +12,7 @@ import { authProviderEnabled } from '@/lib/auth';
 import { AuthLayout } from '@/components/layouts';
 import GithubButton from '@/components/auth/GithubButton';
 import GoogleButton from '@/components/auth/GoogleButton';
-import { JoinWithInvitation, Join } from '@/components/auth';
+import { Join } from '@/components/auth';
 import Head from 'next/head';
 import { Loading } from '@/components/shared';
 import env from '@/lib/env';
@@ -24,9 +24,8 @@ const Signup: NextPageWithLayout<
   const { status } = useSession();
   const { t } = useTranslation('common');
 
-  const { error, token } = router.query as {
+  const { error } = router.query as {
     error: string;
-    token: string;
   };
 
   useEffect(() => {
@@ -43,8 +42,6 @@ const Signup: NextPageWithLayout<
     router.push(env.redirectIfAuthenticated);
   }
 
-  const params = token ? `?token=${token}` : '';
-
   return (
     <>
       <Head>
@@ -60,22 +57,13 @@ const Signup: NextPageWithLayout<
           authProviders.credentials && <div className="divider">{t('or')}</div>}
 
         {authProviders.credentials && (
-          <>
-            {token ? (
-              <JoinWithInvitation
-                inviteToken={token}
-                recaptchaSiteKey={recaptchaSiteKey}
-              />
-            ) : (
-              <Join recaptchaSiteKey={recaptchaSiteKey} />
-            )}
-          </>
+          <Join recaptchaSiteKey={recaptchaSiteKey} />
         )}
       </div>
       <p className="text-center text-sm text-gray-600 mt-3">
         {t('already-have-an-account')}
         <Link
-          href={`/auth/login/${params}`}
+          href="/auth/login"
           className="font-medium text-primary hover:text-[color-mix(in_oklab,oklch(var(--p)),black_7%)]"
         >
           &nbsp;{t('sign-in')}

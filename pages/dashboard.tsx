@@ -1,5 +1,4 @@
 import { Loading } from '@/components/shared';
-import useTeams from 'hooks/useTeams';
 import { GetServerSidePropsContext } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useRouter } from 'next/router';
@@ -8,19 +7,11 @@ import type { NextPageWithLayout } from 'types';
 
 const Dashboard: NextPageWithLayout = () => {
   const router = useRouter();
-  const { teams, isLoading } = useTeams();
 
   useEffect(() => {
-    if (isLoading || !teams) {
-      return;
-    }
-
-    if (teams.length > 0) {
-      router.push(`/teams/${teams[0].slug}/settings`);
-    } else {
-      router.push('teams?newTeam=true');
-    }
-  }, [isLoading, router, teams]);
+    // Redirect to venues page
+    router.push('/venues');
+  }, [router]);
 
   return <Loading />;
 };

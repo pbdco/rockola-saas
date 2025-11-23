@@ -1,78 +1,60 @@
+import type { NextApiRequest } from 'next';
+import { ApiError } from '@/lib/errors';
 import { prisma } from '@/lib/prisma';
-import { createHash, randomBytes } from 'crypto';
+import { extractAuthToken } from '@/lib/server-common';
+import crypto from 'crypto';
+import { User } from '@prisma/client';
 
-interface CreateApiKeyParams {
-  name: string;
-  teamId: string;
-}
+export const validateApiKey = async (
+  req: NextApiRequest
+): Promise<User | null> => {
+  const token = extractAuthToken(req);
 
-const hashApiKey = (apiKey: string) => {
-  return createHash('sha256').update(apiKey).digest('hex');
-};
+  if (!token) {
+    return null;
+  }
 
-const generateUniqueApiKey = () => {
-  const apiKey = randomBytes(16).toString('hex');
+  // Hash the provided token to compare with stored hashed keys
+  const hashedKey = crypto.createHash('sha256').update(token).digest('hex');
 
-  return [hashApiKey(apiKey), apiKey];
-};
-
-export const createApiKey = async (params: CreateApiKeyParams) => {
-  const { name, teamId } = params;
-
-  const [hashedKey, apiKey] = generateUniqueApiKey();
-
-  await prisma.apiKey.create({
-    data: {
-      name,
-      hashedKey: hashedKey,
-      team: { connect: { id: teamId } },
-    },
+  // Find the API key
+  const apiKey = await prisma.apiKey.findUnique({
+    where: { hashedKey },
+    include: { user: true },
   });
 
-  return apiKey;
+  if (!apiKey) {
+    return null;
+  }
+
+  // Check if API key is expired
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+    throw new ApiError(401, 'API key has expired');
+  }
+
+  // Update last used timestamp
+  await prisma.apiKey.update({
+    where: { id: apiKey.id },
+    data: { lastUsedAt: new Date() },
+  });
+
+  return apiKey.user;
 };
 
-export const fetchApiKeys = async (teamId: string) => {
-  return prisma.apiKey.findMany({
-    where: {
-      teamId,
-    },
-    select: {
-      id: true,
-      name: true,
-      createdAt: true,
-    },
-  });
-};
+export const getUserFromRequest = async (
+  req: NextApiRequest
+): Promise<User | null> => {
+  // Try API key first
+  try {
+    const user = await validateApiKey(req);
+    if (user) {
+      return user;
+    }
+  } catch (error) {
+    // If API key validation throws (e.g., expired), re-throw it
+    throw error;
+  }
 
-export const deleteApiKey = async (id: string) => {
-  return prisma.apiKey.delete({
-    where: {
-      id,
-    },
-  });
-};
-
-export const getApiKey = async (apiKey: string) => {
-  return prisma.apiKey.findUnique({
-    where: {
-      hashedKey: hashApiKey(apiKey),
-    },
-    select: {
-      id: true,
-      teamId: true,
-    },
-  });
-};
-
-export const getApiKeyById = async (id: string) => {
-  return prisma.apiKey.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      teamId: true,
-    },
-  });
+  // If no API key, return null (session will be checked separately)
+  return null;
 };

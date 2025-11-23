@@ -1,123 +1,79 @@
-import { InputWithLabel, Loading } from '@/components/shared';
-import { maxLengthPolicies } from '@/lib/common';
-import env from '@/lib/env';
-import { useFormik } from 'formik';
-import useInvitation from 'hooks/useInvitation';
-import { signIn, useSession } from 'next-auth/react';
-import { useTranslation } from 'next-i18next';
-import Head from 'next/head';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import React from 'react';
 import { Button } from 'react-daisyui';
+import { useFormik } from 'formik';
+import { useTranslation } from 'next-i18next';
 import toast from 'react-hot-toast';
-import * as Yup from 'yup';
+import { useRouter } from 'next/router';
+import env from '@/lib/env';
+import { InputWithLabel } from '@/components/shared';
+import { defaultHeaders } from '@/lib/common';
+import type { ApiResponse } from 'types';
 
-interface MagicLinkProps {
-  csrfToken: string | undefined;
-}
-
-const MagicLink = ({ csrfToken }: MagicLinkProps) => {
-  const router = useRouter();
-  const { status } = useSession();
+const MagicLink = () => {
   const { t } = useTranslation('common');
-  const { invitation } = useInvitation();
+  const router = useRouter();
 
-  const params = invitation ? `?token=${invitation.token}` : '';
-
-  const callbackUrl = invitation
-    ? `/invitations/${invitation.token}`
-    : env.redirectIfAuthenticated;
+  const callbackUrl = env.redirectIfAuthenticated;
 
   const formik = useFormik({
     initialValues: {
       email: '',
     },
-    validationSchema: Yup.object().shape({
-      email: Yup.string().required().email().max(maxLengthPolicies.email),
-    }),
+    validate: (values) => {
+      const errors: any = {};
+      
+      if (!values.email) {
+        errors.email = 'Email is required';
+      } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)) {
+        errors.email = 'Invalid email address';
+      }
+      
+      return errors;
+    },
     onSubmit: async (values) => {
-      const response = await signIn('email', {
-        email: values.email,
-        csrfToken,
-        redirect: false,
-        callbackUrl,
+      const response = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: defaultHeaders,
+        body: JSON.stringify({ ...values, callbackUrl }),
       });
 
+      const json = (await response.json()) as ApiResponse;
+
+      if (!response.ok) {
+        toast.error(json.error.message);
+        return;
+      }
+
       formik.resetForm();
-
-      if (response?.error) {
-        toast.error(t('email-login-error'));
-        return;
-      }
-
-      if (response?.status === 200 && response?.ok) {
-        toast.success(t('email-login-success'));
-        return;
-      }
+      toast.success(t('magic-link-sent'));
+      router.push('/auth/magic-link');
     },
   });
 
-  if (status === 'loading') {
-    return <Loading />;
-  }
-
-  if (status === 'authenticated') {
-    router.push(env.redirectIfAuthenticated);
-  }
-
   return (
-    <>
-      <Head>
-        <title>{t('magic-link-title')}</title>
-      </Head>
-      <div className="rounded p-6 border">
-        <form onSubmit={formik.handleSubmit}>
-          <div className="space-y-2">
-            <InputWithLabel
-              type="email"
-              label="Email"
-              name="email"
-              placeholder="jackson@boxyhq.com"
-              value={formik.values.email}
-              descriptionText="We’ll email you a magic link for a password-free sign in."
-              error={formik.touched.email ? formik.errors.email : undefined}
-              onChange={formik.handleChange}
-            />
-            <Button
-              type="submit"
-              color="primary"
-              loading={formik.isSubmitting}
-              active={formik.dirty}
-              fullWidth
-              size="md"
-            >
-              {t('send-magic-link')}
-            </Button>
-          </div>
-        </form>
-        <div className="divider"></div>
-        <div className="space-y-3">
-          <Link
-            href={`/auth/login/${params}`}
-            className="btn btn-outline w-full"
-          >
-            &nbsp;{t('sign-in-with-password')}
-          </Link>
-          <Link href="/auth/sso" className="btn btn-outline w-full">
-            &nbsp;{t('continue-with-saml-sso')}
-          </Link>
-        </div>
-      </div>
-      <p className="text-center text-sm text-gray-600 mt-3">
-        {t('dont-have-an-account')}
-        <Link
-          href={`/auth/join${params}`}
-          className="font-medium text-indigo-600 hover:text-indigo-500"
+    <form onSubmit={formik.handleSubmit}>
+      <div className="space-y-2">
+        <InputWithLabel
+          type="email"
+          label={t('email')}
+          name="email"
+          placeholder="jackson@boxyhq.com"
+          value={formik.values.email}
+          error={formik.touched.email ? formik.errors.email : undefined}
+          onChange={formik.handleChange}
+        />
+        <Button
+          type="submit"
+          color="primary"
+          loading={formik.isSubmitting}
+          active={formik.dirty}
+          fullWidth
+          size="md"
         >
-          &nbsp;{t('create-a-free-account')}
-        </Link>
-      </p>
-    </>
+          {t('sign-in-with-email')}
+        </Button>
+      </div>
+    </form>
   );
 };
 

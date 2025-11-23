@@ -1,10 +1,7 @@
 import { z } from 'zod';
-import { slugify } from '../server-common';
 import {
-  teamName,
   apiKeyId,
   slug,
-  domain,
   email,
   password,
   token,
@@ -25,6 +22,7 @@ import {
   name,
   image,
   eventTypes,
+  venueId,
 } from './primitives';
 
 export const createApiKeySchema = z.object({
@@ -35,18 +33,46 @@ export const deleteApiKeySchema = z.object({
   apiKeyId,
 });
 
-export const teamSlugSchema = z.object({
-  slug,
+// Team schemas removed - teams feature has been removed from the application
+
+const venueName = name();
+const venueAddress = z
+  .string({ invalid_type_error: 'Address must be a string' })
+  .max(200)
+  .optional()
+  .transform((value) => value?.trim() || undefined);
+
+const venueCurrency = z
+  .string({ invalid_type_error: 'Currency must be a string' })
+  .min(3)
+  .max(10)
+  .optional()
+  .transform((value) => (value ? value.toUpperCase() : 'USD'));
+
+const venuePrice = z
+  .number({ invalid_type_error: 'Price per song must be a number' })
+  .nonnegative()
+  .max(1000)
+  .nullable()
+  .optional();
+
+export const createVenueSchema = z.object({
+  name: venueName,
+  slug: slug.optional(),
+  address: venueAddress,
+  mode: z.enum(['QUEUE', 'PLAYLIST', 'AUTOMATION']).default('QUEUE'),
+  pricingEnabled: z.boolean().optional().default(false),
+  pricePerSong: venuePrice,
+  currency: venueCurrency,
+  isActive: z.boolean().optional().default(true),
+  spotifyClientId: z.string().optional(),
+  spotifyClientSecret: z.string().optional(),
 });
 
-export const updateTeamSchema = z.object({
-  name: teamName,
-  slug: slug.transform((slug) => slugify(slug)),
-  domain,
-});
+export const updateVenueSchema = createVenueSchema.partial();
 
-export const createTeamSchema = z.object({
-  name: teamName,
+export const venueIdSchema = z.object({
+  venueId,
 });
 
 export const updateAccountSchema = z.union([
@@ -66,17 +92,11 @@ export const updatePasswordSchema = z.object({
   newPassword: password,
 });
 
-export const userJoinSchema = z.union([
-  z.object({
-    team: teamName,
-    slug,
-  }),
-  z.object({
-    name: name(),
-    email,
-    password,
-  }),
-]);
+export const userJoinSchema = z.object({
+  name: name(),
+  email,
+  password,
+});
 
 export const resetPasswordSchema = z.object({
   password,
@@ -162,12 +182,7 @@ export const deleteMemberSchema = z.object({
   memberId,
 });
 
-// email or slug
-export const ssoVerifySchema = z
-  .object({
-    email: email.optional().or(z.literal('')),
-    slug: slug.optional().or(z.literal('')),
-  })
-  .refine((data) => data.email || data.slug, {
-    message: 'At least one of email or slug is required',
-  });
+// SSO verification schema - simplified to use email only (teams removed)
+export const ssoVerifySchema = z.object({
+  email: email,
+});

@@ -232,6 +232,296 @@ The default login options are email and GitHub. Configure below:
 - Webhook
 - Payments
 - Security Headers
+- **API Keys** - Create and manage API keys for programmatic access
+- **RESTful API** - Complete API for user and venue management
+
+## 🔑 API Keys & API Access
+
+The application provides API key authentication for programmatic access to all endpoints. API keys are recommended for automated testing, server-to-server communication, and external integrations.
+
+### Creating API Keys
+
+1. **Login** as a user (Super Admin for admin endpoints)
+2. **Navigate to Settings → Security** (`/settings/security`)
+3. **Scroll to "API Keys" section**
+4. **Click "Create API Key"**
+5. **Enter a name** (e.g., "Admin API Key", "Testing Key", "Production Key")
+6. **Copy the API key immediately** - you won't be able to see it again once you close the dialog!
+
+### Using API Keys
+
+API keys use Bearer token authentication in the `Authorization` header:
+
+```bash
+# Set your API key
+export API_KEY="your-api-key-here"
+
+# Use in API requests
+curl -X GET http://localhost:4002/api/admin/users \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+### API Key Features
+
+- ✅ **User-specific permissions** - API keys inherit permissions from the user who created them
+- ✅ **Super Admin API keys** - Can access all admin endpoints
+- ✅ **Usage tracking** - `lastUsedAt` timestamp is automatically updated
+- ✅ **Multiple keys** - Create unlimited API keys for different purposes
+- ✅ **Revocable** - Delete API keys anytime from the Settings page
+- ✅ **No expiration** - API keys don't expire by default (optional expiration available)
+
+### Why Use API Keys?
+
+**API Keys are better for:**
+- Automated testing and scripts
+- Server-to-server communication
+- CI/CD pipelines
+- Long-running processes
+- External integrations
+- API clients (Postman, Insomnia, etc.)
+- Production environments
+
+**Session Tokens are better for:**
+- Browser-based interactions
+- Short-term testing
+- Development/debugging
+- Interactive use
+
+## 📡 API Endpoints
+
+### Base URL
+```
+http://localhost:4002
+```
+
+### Authentication
+
+All API endpoints support two authentication methods:
+
+1. **API Key (Recommended)** - Bearer token in `Authorization` header
+   ```bash
+   -H "Authorization: Bearer $API_KEY"
+   ```
+
+2. **Session Token** - Cookie-based authentication
+   ```bash
+   -H "Cookie: next-auth.session-token=$SESSION_TOKEN"
+   ```
+
+### Super Admin Endpoints
+
+Super Admin endpoints require a user with `SUPERADMIN` role. All endpoints support both API key and session token authentication.
+
+#### User Management
+
+**Get All Users**
+```bash
+curl -X GET http://localhost:4002/api/admin/users \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Create User**
+```bash
+curl -X POST http://localhost:4002/api/admin/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "New User",
+    "email": "newuser@example.com",
+    "password": "SecurePass123!",
+    "role": "USER"
+  }' \
+  | jq .
+```
+
+**Update User**
+```bash
+curl -X PUT http://localhost:4002/api/admin/users/$USER_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "Updated Name",
+    "email": "updated@example.com",
+    "role": "SUPERADMIN"
+  }' \
+  | jq .
+```
+
+**Block User**
+```bash
+curl -X PATCH "http://localhost:4002/api/admin/users/$USER_ID?action=block" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"blocked": true}' \
+  | jq .
+```
+
+**Unblock User**
+```bash
+curl -X PATCH "http://localhost:4002/api/admin/users/$USER_ID?action=block" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"blocked": false}' \
+  | jq .
+```
+
+**Change User Password**
+```bash
+curl -X PATCH "http://localhost:4002/api/admin/users/$USER_ID?action=change-password" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"newPassword": "NewSecurePass123!"}' \
+  | jq .
+```
+
+**Delete User**
+```bash
+curl -X DELETE http://localhost:4002/api/admin/users/$USER_ID \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+#### Venue Management (Admin Access)
+
+**Get All Venues for a User**
+```bash
+curl -X GET http://localhost:4002/api/admin/users/$USER_ID/venues \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Create Venue for User**
+```bash
+curl -X POST http://localhost:4002/api/admin/users/$USER_ID/venues \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "Admin Created Venue",
+    "slug": "admin-venue",
+    "address": "123 Admin Street",
+    "mode": "QUEUE",
+    "isActive": true
+  }' \
+  | jq .
+```
+
+**Get Venue by ID**
+```bash
+curl -X GET http://localhost:4002/api/admin/users/$USER_ID/venues/$VENUE_ID \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Update Venue**
+```bash
+curl -X PUT http://localhost:4002/api/admin/users/$USER_ID/venues/$VENUE_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "Updated Venue Name",
+    "isActive": false
+  }' \
+  | jq .
+```
+
+**Delete Venue**
+```bash
+curl -X DELETE http://localhost:4002/api/admin/users/$USER_ID/venues/$VENUE_ID \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+### API Key Management Endpoints
+
+**Get All Your API Keys**
+```bash
+curl -X GET http://localhost:4002/api/api-keys \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Create New API Key**
+```bash
+curl -X POST http://localhost:4002/api/api-keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"name": "New API Key"}' \
+  | jq .
+```
+**Note:** The response includes the `apiKey` field - save it immediately!
+
+**Delete API Key**
+```bash
+curl -X DELETE http://localhost:4002/api/api-keys/$API_KEY_ID \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+### User Endpoints
+
+**Get All Venues (Current User)**
+```bash
+curl -X GET http://localhost:4002/api/venues \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Create Venue (Current User)**
+```bash
+curl -X POST http://localhost:4002/api/venues \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "My Venue",
+    "slug": "my-venue",
+    "mode": "QUEUE",
+    "isActive": true
+  }' \
+  | jq .
+```
+
+**Get Venue by ID**
+```bash
+curl -X GET http://localhost:4002/api/venues/$VENUE_ID \
+  -H "Authorization: Bearer $API_KEY" \
+  | jq .
+```
+
+**Update Venue**
+```bash
+curl -X PUT http://localhost:4002/api/venues/$VENUE_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "name": "Updated Venue",
+    "isActive": false
+  }' \
+  | jq .
+```
+
+**Delete Venue**
+```bash
+curl -X DELETE http://localhost:4002/api/venues/$VENUE_ID \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+### Response Codes
+
+- `200 OK` - Request successful
+- `201 Created` - Resource created successfully
+- `204 No Content` - Resource deleted successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Authentication required or invalid
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `405 Method Not Allowed` - HTTP method not supported
+- `500 Internal Server Error` - Server error
+
+### Complete API Documentation
+
+For detailed API documentation with all endpoints and examples, see:
+- [`ADMIN-API-TESTS.md`](./ADMIN-API-TESTS.md) - Complete Super Admin API reference
+- [`ADMIN-API-TESTS-WITH-API-KEYS.md`](./ADMIN-API-TESTS-WITH-API-KEYS.md) - API key focused guide
+- [`API-KEYS-GUIDE.md`](./API-KEYS-GUIDE.md) - Comprehensive API keys guide
 
 ## ➡️ Coming Soon
 

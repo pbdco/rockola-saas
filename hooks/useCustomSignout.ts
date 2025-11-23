@@ -16,7 +16,8 @@ export function useCustomSignOut() {
         throw new Error('Signout failed');
       }
 
-      router.push('/auth/login');
+      // Redirect to login without callbackUrl to avoid redirect loops
+      router.push('/auth/login?callbackUrl=/venues');
     } catch (error) {
       console.error('Error during sign out:', error);
     }

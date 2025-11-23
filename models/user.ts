@@ -1,7 +1,7 @@
 import { ApiError } from '@/lib/errors';
 import { Action, Resource, permissions } from '@/lib/permissions';
 import { prisma } from '@/lib/prisma';
-import { Role, TeamMember } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import type { Session } from 'next-auth';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from '@/lib/session';
@@ -20,6 +20,7 @@ export const createUser = async (data: {
   email: string;
   password?: string;
   emailVerified?: Date | null;
+  role?: Role;
 }) => {
   return await prisma.user.create({
     data: normalizeUser(data),
@@ -82,6 +83,10 @@ export const findFirstUserOrThrow = async ({ where }) => {
   return normalizeUser(user);
 };
 
+export const isSuperAdmin = (user: Pick<User, 'role'> | null): boolean => {
+  return user?.role === Role.SUPERADMIN;
+};
+
 const isAllowed = (role: Role, resource: Resource, action: Action) => {
   const rolePermissions = permissions[role];
 
@@ -102,7 +107,7 @@ const isAllowed = (role: Role, resource: Resource, action: Action) => {
 };
 
 export const throwIfNotAllowed = (
-  user: Pick<TeamMember, 'role'>,
+  user: Pick<User, 'role'>,
   resource: Resource,
   action: Action
 ) => {
@@ -120,12 +125,41 @@ export const throwIfNotAllowed = (
 export const getCurrentUser = async (
   req: NextApiRequest,
   res: NextApiResponse
-) => {
+): Promise<User> => {
   const session = await getSession(req, res);
 
-  if (!session) {
-    throw new Error('Unauthorized');
+  if (!session || !session.user) {
+    throw new ApiError(401, 'Unauthorized');
   }
 
-  return session.user;
+  const user = await getUser({ id: session.user.id });
+
+  if (!user) {
+    throw new ApiError(401, 'User not found');
+  }
+
+  return user;
+};
+
+// Throw if user is not authenticated
+export const throwIfNoUserAccess = async (
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<User> => {
+  // Try API key authentication first
+  const { getUserFromRequest } = await import('./apiKey');
+  const apiKeyUser = await getUserFromRequest(req);
+  
+  if (apiKeyUser) {
+    return apiKeyUser;
+  }
+
+  // Fall back to session authentication
+  const user = await getCurrentUser(req, res);
+
+  if (!user) {
+    throw new ApiError(401, 'Unauthorized');
+  }
+
+  return user;
 };

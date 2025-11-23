@@ -1,17 +1,14 @@
 import { Role } from '@prisma/client';
 
 type RoleType = (typeof Role)[keyof typeof Role];
-export type Action = 'create' | 'update' | 'read' | 'delete' | 'leave';
+export type Action = 'create' | 'update' | 'read' | 'delete' | 'manage';
 export type Resource =
-  | 'team'
-  | 'team_member'
-  | 'team_invitation'
-  | 'team_sso'
-  | 'team_dsync'
-  | 'team_audit_log'
-  | 'team_webhook'
-  | 'team_payments'
-  | 'team_api_key';
+  | 'venue'
+  | 'api_key'
+  | 'payment'
+  | 'song_request'
+  | 'user'
+  | 'platform';
 
 type RolePermissions = {
   [role in RoleType]: Permission[];
@@ -24,96 +21,58 @@ export type Permission = {
 
 export const availableRoles = [
   {
-    id: Role.MEMBER,
-    name: 'Member',
+    id: Role.USER,
+    name: 'User',
   },
   {
-    id: Role.ADMIN,
-    name: 'Admin',
-  },
-  {
-    id: Role.OWNER,
-    name: 'Owner',
+    id: Role.SUPERADMIN,
+    name: 'Super Admin',
   },
 ];
 
 export const permissions: RolePermissions = {
-  OWNER: [
+  SUPERADMIN: [
     {
-      resource: 'team',
+      resource: 'venue',
       actions: '*',
     },
     {
-      resource: 'team_member',
+      resource: 'api_key',
       actions: '*',
     },
     {
-      resource: 'team_invitation',
+      resource: 'payment',
       actions: '*',
     },
     {
-      resource: 'team_sso',
+      resource: 'song_request',
       actions: '*',
     },
     {
-      resource: 'team_dsync',
+      resource: 'user',
       actions: '*',
     },
     {
-      resource: 'team_audit_log',
-      actions: '*',
-    },
-    {
-      resource: 'team_payments',
-      actions: '*',
-    },
-    {
-      resource: 'team_webhook',
-      actions: '*',
-    },
-    {
-      resource: 'team_api_key',
+      resource: 'platform',
       actions: '*',
     },
   ],
-  ADMIN: [
+  USER: [
     {
-      resource: 'team',
-      actions: '*',
+      resource: 'venue',
+      actions: '*', // Users can fully manage their own venues
     },
     {
-      resource: 'team_member',
-      actions: '*',
+      resource: 'api_key',
+      actions: '*', // Users can manage their own API keys
     },
     {
-      resource: 'team_invitation',
-      actions: '*',
+      resource: 'payment',
+      actions: ['read'], // Users can read their own payments
     },
     {
-      resource: 'team_sso',
-      actions: '*',
-    },
-    {
-      resource: 'team_dsync',
-      actions: '*',
-    },
-    {
-      resource: 'team_audit_log',
-      actions: '*',
-    },
-    {
-      resource: 'team_webhook',
-      actions: '*',
-    },
-    {
-      resource: 'team_api_key',
-      actions: '*',
-    },
-  ],
-  MEMBER: [
-    {
-      resource: 'team',
-      actions: ['read', 'leave'],
+      resource: 'song_request',
+      actions: ['read'], // Users can read song requests for their venues
     },
   ],
 };

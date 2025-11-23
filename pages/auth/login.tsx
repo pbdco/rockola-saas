@@ -44,10 +44,11 @@ const Login: NextPageWithLayout<
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
-  const { error, success, token } = router.query as {
+  const { error, success, token, callbackUrl } = router.query as {
     error: string;
     success: string;
     token: string;
+    callbackUrl: string;
   };
 
   const handlePasswordVisibility = () => {
@@ -56,7 +57,15 @@ const Login: NextPageWithLayout<
 
   useEffect(() => {
     if (error) {
-      setMessage({ text: error, status: 'error' });
+      // Handle specific error messages
+      let errorKey = error;
+      if (error === 'account-blocked') {
+        errorKey = 'account-blocked';
+      } else if (error === 'exceeded-login-attempts') {
+        // This is for account lockout (too many failed attempts)
+        errorKey = 'exceeded-login-attempts';
+      }
+      setMessage({ text: errorKey, status: 'error' });
     }
 
     if (success) {
@@ -66,7 +75,7 @@ const Login: NextPageWithLayout<
 
   const redirectUrl = token
     ? `/invitations/${token}`
-    : env.redirectIfAuthenticated;
+    : (callbackUrl || env.redirectIfAuthenticated);
 
   const formik = useFormik({
     initialValues: {
@@ -216,11 +225,12 @@ const Login: NextPageWithLayout<
       </div>
       <p className="text-center text-sm text-gray-600 mt-3">
         {t('dont-have-an-account')}
+        {' '}
         <Link
-          href={`/auth/join${params}`}
+          href={token ? `/auth/join?token=${token}` : '/auth/join'}
           className="font-medium text-primary hover:text-[color-mix(in_oklab,oklch(var(--p)),black_7%)]"
         >
-          &nbsp;{t('create-a-free-account')}
+          {t('create-a-free-account')}
         </Link>
       </p>
     </>

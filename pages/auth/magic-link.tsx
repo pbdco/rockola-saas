@@ -11,8 +11,8 @@ import type { NextPageWithLayout } from 'types';
 
 type LoginProps = InferGetServerSidePropsType<typeof getServerSideProps>;
 
-const Login: NextPageWithLayout<LoginProps> = ({ csrfToken }) => {
-  return <MagicLink csrfToken={csrfToken} />;
+const Login: NextPageWithLayout<LoginProps> = () => {
+  return <MagicLink />;
 };
 
 Login.getLayout = function getLayout(page: ReactElement) {

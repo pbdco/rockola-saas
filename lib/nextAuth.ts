@@ -3,7 +3,7 @@ import type {
   NextApiResponse,
   GetServerSidePropsContext,
 } from 'next';
-import { Account, NextAuthOptions, Profile, User } from 'next-auth';
+import { Account, NextAuthOptions, User } from 'next-auth';
 import BoxyHQSAMLProvider from 'next-auth/providers/boxyhq-saml';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import EmailProvider from 'next-auth/providers/email';
@@ -15,9 +15,7 @@ import { setCookie, getCookie } from 'cookies-next';
 import { encode, decode } from 'next-auth/jwt';
 import { randomUUID } from 'crypto';
 
-import { Role } from '@prisma/client';
 import { getAccount } from 'models/account';
-import { addTeamMember, getTeam } from 'models/team';
 import { createUser, getUser } from 'models/user';
 import { verifyPassword } from '@/lib/auth';
 import { isEmailAllowed } from '@/lib/email/utils';
@@ -69,6 +67,11 @@ if (isAuthProviderEnabled('credentials')) {
 
         if (!user) {
           throw new Error('invalid-credentials');
+        }
+
+        // Check if account is locked (blocked by admin)
+        if (user.lockedAt) {
+          throw new Error('account-blocked');
         }
 
         if (exceededLoginAttemptsThreshold(user)) {
@@ -283,7 +286,7 @@ export const getAuthOptions = (
     },
     secret: env.nextAuth.secret,
     callbacks: {
-      async signIn({ user, account, profile }) {
+      async signIn({ user, account }) {
         if (!user || !user.email || !account) {
           return false;
         }
@@ -294,6 +297,11 @@ export const getAuthOptions = (
 
         const existingUser = await getUser({ email: user.email });
         const isIdpLogin = account.provider === 'boxyhq-idp';
+
+        // Check if account is locked (blocked by admin) for existing users
+        if (existingUser?.lockedAt) {
+          return '/auth/login?error=exceeded-login-attempts';
+        }
 
         // Handle credentials provider
         if (isCredentialsProviderCallbackWithDbSession && !isIdpLogin) {
@@ -318,13 +326,7 @@ export const getAuthOptions = (
 
           await linkAccount(newUser, account);
 
-          if (isIdpLogin && user) {
-            await linkToTeam(user as unknown as Profile, newUser.id);
-          }
-
-          if (account.provider === 'boxyhq-saml' && profile) {
-            await linkToTeam(profile, newUser.id);
-          }
+          // Teams removed - no longer linking users to teams via SSO
 
           if (isCredentialsProviderCallbackWithDbSession) {
             await createDatabaseSession(newUser, req, res);
@@ -358,8 +360,26 @@ export const getAuthOptions = (
       async session({ session, token, user }) {
         // When using JWT for sessions, the JWT payload (token) is provided.
         // When using database sessions, the User (user) object is provided.
-        if (session && (token || user)) {
-          session.user.id = token?.sub || user?.id;
+        const userId = token?.sub || user?.id;
+        
+        if (session && userId) {
+          // Verify user still exists and is not deleted or blocked
+          try {
+            const dbUser = await getUser({ id: userId });
+            
+            if (!dbUser || dbUser.lockedAt) {
+              // User was deleted or blocked - invalidate session by removing user ID
+              // The middleware will catch this and redirect to login
+              session.user.id = undefined as any;
+              return session;
+            }
+
+            session.user.id = userId;
+          } catch {
+            // If getUser fails (e.g., user doesn't exist), invalidate session
+            session.user.id = undefined as any;
+            return session;
+          }
         }
 
         if (user?.name) {
@@ -426,36 +446,4 @@ const linkAccount = async (user: User, account: Account) => {
       access_token: account.access_token,
     });
   }
-};
-
-const linkToTeam = async (profile: Profile, userId: string) => {
-  const team = await getTeam({
-    id: profile.requested.tenant,
-  });
-
-  // Sort out roles
-  const roles = profile.roles || profile.groups || [];
-  let userRole: Role = team.defaultRole || Role.MEMBER;
-
-  for (let role of roles) {
-    if (env.groupPrefix) {
-      role = role.replace(env.groupPrefix, '');
-    }
-
-    // Owner > Admin > Member
-    if (
-      role.toUpperCase() === Role.ADMIN &&
-      userRole.toUpperCase() !== Role.OWNER.toUpperCase()
-    ) {
-      userRole = Role.ADMIN;
-      continue;
-    }
-
-    if (role.toUpperCase() === Role.OWNER) {
-      userRole = Role.OWNER;
-      break;
-    }
-  }
-
-  await addTeamMember(team.id, userId, userRole);
 };

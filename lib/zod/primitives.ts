@@ -195,6 +195,17 @@ export const invitationId = z
     `Invitation id should be at most ${maxLengthPolicies.invitationId} characters`
   );
 
+export const venueId = z
+  .string({
+    required_error: 'Venue id is required',
+    invalid_type_error: 'Venue id must be a string',
+  })
+  .min(1, 'Venue id is required')
+  .max(
+    maxLengthPolicies.venueId,
+    `Venue id should be at most ${maxLengthPolicies.venueId} characters`
+  );
+
 export const endpointId = z
   .string({
     required_error: 'Endpoint id is required',

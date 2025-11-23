@@ -67,7 +67,9 @@ const unAuthenticatedRoutes = [
   '/api/webhooks/dsync',
   '/auth/**',
   '/invitations/*',
+  '/terms',
   '/terms-condition',
+  '/privacy',
   '/unlock-account',
   '/login/saml',
   '/.well-known/*',
@@ -76,13 +78,71 @@ const unAuthenticatedRoutes = [
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Skip middleware for static files (images, fonts, etc.)
+  const staticFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp', '.woff', '.woff2', '.ttf', '.eot'];
+  if (staticFileExtensions.some(ext => pathname.toLowerCase().endsWith(ext))) {
+    return NextResponse.next();
+  }
+
+  // Explicitly check for public pages first
+  if (pathname === '/terms' || pathname === '/privacy') {
+    const requestHeaders = new Headers(req.headers);
+    const csp = generateCSP();
+    requestHeaders.set('Content-Security-Policy', csp);
+
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+
+    if (env.securityHeadersEnabled) {
+      response.headers.set('Content-Security-Policy', csp);
+      Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+    }
+
+    return response;
+  }
+
   // Bypass routes that don't require authentication
   if (micromatch.isMatch(pathname, unAuthenticatedRoutes)) {
     return NextResponse.next();
   }
 
+  // Check for API key authentication (Bearer token)
+  // If API key is present, allow request through (API endpoints will validate it)
+  const authHeader = req.headers.get('authorization');
+  const hasApiKey = authHeader && authHeader.startsWith('Bearer ');
+
+  // If API key is provided, skip session check and let API endpoint handle validation
+  if (hasApiKey) {
+    const requestHeaders = new Headers(req.headers);
+    const csp = generateCSP();
+    requestHeaders.set('Content-Security-Policy', csp);
+
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+
+    if (env.securityHeadersEnabled) {
+      response.headers.set('Content-Security-Policy', csp);
+      Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+    }
+
+    return response;
+  }
+
   const redirectUrl = new URL('/auth/login', req.url);
-  redirectUrl.searchParams.set('callbackUrl', encodeURI(req.url));
+  
+  // Only set callbackUrl if we're not already going to login/auth pages
+  // and use only the pathname to avoid host issues (0.0.0.0 vs localhost)
+  if (!pathname.startsWith('/auth/') && !pathname.startsWith('/login/')) {
+    // Use only the pathname to avoid issues with different hosts (0.0.0.0 vs localhost)
+    const callbackPath = pathname + (req.nextUrl.search || '');
+    redirectUrl.searchParams.set('callbackUrl', callbackPath);
+  }
 
   // JWT strategy
   if (env.nextAuth.sessionStrategy === 'jwt') {
@@ -90,9 +150,12 @@ export default async function middleware(req: NextRequest) {
       req,
     });
 
-    if (!token) {
+    if (!token || !token.sub) {
       return NextResponse.redirect(redirectUrl);
     }
+
+    // Note: User existence and blocked status checks are handled in the session callback
+    // which runs in Node.js runtime, not Edge Runtime
   }
 
   // Database strategy
@@ -108,9 +171,13 @@ export default async function middleware(req: NextRequest) {
 
     const session = await response.json();
 
-    if (!session.user) {
+    if (!session.user || !session.user.id) {
       return NextResponse.redirect(redirectUrl);
     }
+
+    // Note: User existence and blocked status checks are handled in the session callback
+    // which runs in Node.js runtime, not Edge Runtime. The session callback will
+    // clear session.user.id if the user is deleted or blocked, which will be caught here.
   }
 
   const requestHeaders = new Headers(req.headers);
@@ -135,5 +202,15 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth/session).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - api/auth/session (session endpoint)
+     * - Static file extensions (png, jpg, etc.)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|api/auth/session|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.webp|.*\\.woff|.*\\.woff2|.*\\.ttf|.*\\.eot).*)',
+  ],
 };

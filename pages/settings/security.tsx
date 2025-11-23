@@ -7,6 +7,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import env from '@/lib/env';
 import { UpdatePassword } from '@/components/account';
 import ManageSessions from '@/components/account/ManageSessions';
+import ManageAPIKeys from '@/components/account/ManageAPIKeys';
 
 type SecurityProps = InferGetServerSidePropsType<typeof getServerSideProps>;
 
@@ -15,6 +16,7 @@ const Security = ({ sessionStrategy }: SecurityProps) => {
     <div className="flex gap-10 flex-col">
       <UpdatePassword />
       {sessionStrategy === 'database' && <ManageSessions />}
+      <ManageAPIKeys />
     </div>
   );
 };
