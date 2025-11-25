@@ -56,11 +56,11 @@ const venuePrice = z
   .nullable()
   .optional();
 
-export const createVenueSchema = z.object({
+const baseVenueSchema = z.object({
   name: venueName,
   slug: slug.optional(),
   address: venueAddress,
-  mode: z.enum(['QUEUE', 'PLAYLIST', 'AUTOMATION']).default('QUEUE'),
+  mode: z.enum(['PLAYLIST', 'AUTOMATION']).default('PLAYLIST'),
   pricingEnabled: z.boolean().optional().default(false),
   pricePerSong: venuePrice,
   currency: venueCurrency,
@@ -69,7 +69,27 @@ export const createVenueSchema = z.object({
   spotifyClientSecret: z.string().optional(),
 });
 
-export const updateVenueSchema = createVenueSchema.partial();
+export const createVenueSchema = baseVenueSchema.refine((data) => {
+  // Spotify credentials required only for Automation Mode
+  if (data.mode === 'AUTOMATION') {
+    return !!(data.spotifyClientId && data.spotifyClientSecret);
+  }
+  return true;
+}, {
+  message: 'Spotify Client ID and Secret are required for Automation Mode',
+  path: ['spotifyClientId'],
+});
+
+export const updateVenueSchema = baseVenueSchema.partial().refine((data) => {
+  // Spotify credentials required only for Automation Mode (if mode is being set to AUTOMATION)
+  if (data.mode === 'AUTOMATION') {
+    return !!(data.spotifyClientId && data.spotifyClientSecret);
+  }
+  return true;
+}, {
+  message: 'Spotify Client ID and Secret are required for Automation Mode',
+  path: ['spotifyClientId'],
+});
 
 export const venueIdSchema = z.object({
   venueId,

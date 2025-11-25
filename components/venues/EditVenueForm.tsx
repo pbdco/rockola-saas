@@ -90,14 +90,22 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
     },
     onSubmit: async (values) => {
       try {
+        // Validate Spotify credentials for Automation Mode
+        if (values.mode === 'AUTOMATION') {
+          if (!values.spotifyClientId || !values.spotifyClientSecret) {
+            toast.error(t('spotify-credentials-required-for-automation'));
+            return;
+          }
+        }
+
         const payload = {
           name: values.name,
           // If slug is empty, backend will auto-generate from name
           slug: values.slug?.trim() || undefined,
           address: values.address || undefined,
           mode: values.mode,
-          spotifyClientId: values.spotifyClientId || undefined,
-          spotifyClientSecret: values.spotifyClientSecret || undefined,
+          spotifyClientId: values.mode === 'AUTOMATION' ? values.spotifyClientId : undefined,
+          spotifyClientSecret: values.mode === 'AUTOMATION' ? values.spotifyClientSecret : undefined,
           pricingEnabled: values.pricingEnabled,
           pricePerSong:
             values.pricingEnabled && values.pricePerSong
@@ -255,7 +263,6 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
             value={formik.values.mode}
             onChange={formik.handleChange}
           >
-            <option value="QUEUE">{t('mode-queue')}</option>
             <option value="PLAYLIST">{t('mode-playlist')}</option>
             <option value="AUTOMATION">{t('mode-automation')}</option>
           </Select>
@@ -267,56 +274,60 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
 
       <div className="divider"></div>
 
-      {/* Spotify Configuration Section */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">{t('spotify-configuration')}</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {t('spotify-configuration-description')}
-          </p>
-        </div>
-        
-        <div className="alert alert-info">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span className="text-sm">{t('spotify-credentials-help')}</span>
-        </div>
+      {/* Spotify Configuration Section - Only for Automation Mode */}
+      {formik.values.mode === 'AUTOMATION' && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">{t('spotify-configuration')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {t('spotify-configuration-description-automation')}
+            </p>
+          </div>
+          
+          <div className="alert alert-info">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span className="text-sm" dangerouslySetInnerHTML={{ __html: t('spotify-credentials-help-automation') }} />
+          </div>
 
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">{t('spotify-client-id')}</span>
-            <span className="label-text-alt">{t('required-for-spotify')}</span>
-          </label>
-          <Input
-            name="spotifyClientId"
-            type="text"
-            placeholder={t('spotify-client-id-placeholder')}
-            value={formik.values.spotifyClientId}
-            onChange={formik.handleChange}
-          />
-          <label className="label">
-            <span className="label-text-alt">{t('spotify-client-id-help')}</span>
-          </label>
-        </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">{t('spotify-client-id')}</span>
+              <span className="label-text-alt text-error">{t('required')}</span>
+            </label>
+            <Input
+              name="spotifyClientId"
+              type="text"
+              placeholder={t('spotify-client-id-placeholder')}
+              value={formik.values.spotifyClientId}
+              onChange={formik.handleChange}
+              required={formik.values.mode === 'AUTOMATION'}
+            />
+            <label className="label">
+              <span className="label-text-alt">{t('spotify-client-id-help')}</span>
+            </label>
+          </div>
 
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">{t('spotify-client-secret')}</span>
-            <span className="label-text-alt">{t('required-for-spotify')}</span>
-          </label>
-          <Input
-            name="spotifyClientSecret"
-            type="password"
-            placeholder={t('spotify-client-secret-placeholder')}
-            value={formik.values.spotifyClientSecret}
-            onChange={formik.handleChange}
-          />
-          <label className="label">
-            <span className="label-text-alt">{t('spotify-client-secret-help')}</span>
-          </label>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">{t('spotify-client-secret')}</span>
+              <span className="label-text-alt text-error">{t('required')}</span>
+            </label>
+            <Input
+              name="spotifyClientSecret"
+              type="password"
+              placeholder={t('spotify-client-secret-placeholder')}
+              value={formik.values.spotifyClientSecret}
+              onChange={formik.handleChange}
+              required={formik.values.mode === 'AUTOMATION'}
+            />
+            <label className="label">
+              <span className="label-text-alt">{t('spotify-client-secret-help')}</span>
+            </label>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="divider"></div>
 

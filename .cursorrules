@@ -1,0 +1,253 @@
+# Cursor AI Agent Rules for Rockola Project
+
+## 🎯 Project Context
+
+**Tech Stack:**
+- Next.js 15.3.3 (App Router + Pages Router hybrid)
+- React 18.3.1 with TypeScript 5.8.3
+- Prisma 6.9.0 + PostgreSQL 16.4
+- Tailwind CSS 3.4.17 + DaisyUI 4.12.24
+- Docker (development & production)
+- NextAuth 4.24.11
+- Formik + Yup (forms), SWR (data fetching), Zod (validation)
+
+**Project Structure:**
+- `/pages` - Next.js pages and API routes
+- `/components` - React components
+- `/lib` - Utilities, helpers, configurations
+- `/models` - Prisma model wrappers
+- `/prisma` - Database schema and migrations
+- `/hooks` - Custom React hooks
+- `/locales` - i18n translations
+
+## 🛡️ Critical Development Rules
+
+### Database Schema Changes
+- ALWAYS update `prisma/schema.prisma` FIRST before code changes
+- ALWAYS create migration file in `prisma/migrations/` with descriptive name
+- ALWAYS use idempotent SQL (`IF NOT EXISTS`, `IF EXISTS`)
+- ALWAYS run `scripts/verify-database-schema.sh` after migration
+- NEVER modify database directly without Prisma schema update
+- NEVER skip migration files
+- NEVER assume database state matches schema
+
+### Model Relationships
+- ALWAYS check ALL related models when changing relationships
+- ALWAYS update foreign keys in migration
+- ALWAYS handle data migration if changing relationship type
+- Common issue: `teamId` → `userId` migrations (Venue, ApiKey, etc.)
+
+### API Endpoints
+- ALWAYS check database schema before writing queries
+- ALWAYS use Prisma types, not raw SQL
+- ALWAYS handle errors gracefully
+- NEVER assume database columns exist
+- NEVER use `_count` on relations without verifying schema
+
+### TypeScript
+- ALWAYS use Prisma generated types
+- ALWAYS run `npx prisma generate` after schema changes
+- NEVER use `any` types for database models
+- NEVER ignore TypeScript errors
+
+### Docker & Testing
+- ALWAYS test changes in Docker environment
+- ALWAYS check logs: `docker-compose logs app`
+- ALWAYS rebuild if schema changed: `docker-compose build app`
+- NEVER assume local environment matches Docker
+
+## 📋 Pre-Commit Checklist
+
+Before committing ANY changes:
+- [ ] `prisma/schema.prisma` updated (if schema changed)
+- [ ] Migration file created and tested (if schema changed)
+- [ ] `scripts/verify-database-schema.sh` passes
+- [ ] TypeScript compiles without errors
+- [ ] No `any` types for models
+- [ ] All queries use Prisma (not raw SQL)
+- [ ] Error handling in place
+- [ ] Tested in Docker environment
+- [ ] No errors in logs
+
+## 🔍 When Making Database Changes
+
+1. Check `prisma/schema.prisma` first
+2. Create migration file with idempotent SQL
+3. Run verification script: `./scripts/verify-database-schema.sh`
+4. Update all related code
+5. Test in Docker environment
+6. Check logs for errors: `docker-compose logs app | grep -i error`
+
+## 🐛 Common Issues
+
+### "Column does not exist"
+- Check `prisma/schema.prisma`
+- Run migration
+- Verify with `verify-database-schema.sh`
+- Rebuild Docker container
+
+### "Relation does not exist"
+- Check migration file
+- Verify foreign key constraint
+- Check Prisma schema relations
+
+### "Type error: Property does not exist"
+- Run `docker-compose exec app npx prisma generate`
+- Restart app: `docker-compose restart app`
+
+## 📝 Migration Best Practices
+
+- Use descriptive names: `YYYYMMDDHHMMSS_descriptive_name`
+- Always use `IF NOT EXISTS` / `IF EXISTS` for idempotency
+- Handle existing data migration
+- Test on empty database first
+
+## ⚠️ Red Flags (Stop and Fix)
+
+- Database errors: "Column does not exist", "Relation does not exist"
+- TypeScript errors with Prisma models
+- Migration failures
+- Schema mismatch (verification script fails)
+
+## ✅ Success Criteria
+
+- Schema matches database
+- All migrations applied
+- TypeScript compiles
+- No errors in logs
+- Verification script passes
+- Application works in Docker
+
+## 💻 Next.js & React Best Practices
+
+### File Organization
+- ALWAYS use kebab-case for file names: `create-venue-form.tsx`
+- ALWAYS use PascalCase for component names: `CreateVenueForm`
+- ALWAYS co-locate related files: component + styles + tests in same directory
+- ALWAYS use barrel exports (`index.ts`) for component directories
+
+### Component Structure
+- ALWAYS use functional components with TypeScript
+- ALWAYS define props interface above component
+- ALWAYS use named exports for components
+- ALWAYS use default exports for pages only
+- PREFER composition over prop drilling
+- USE React hooks (useState, useEffect, useCallback, useMemo) appropriately
+
+### Next.js Patterns
+- ALWAYS use `getServerSideProps` for pages that need auth/data fetching
+- ALWAYS use API routes (`/pages/api/`) for backend logic
+- ALWAYS handle errors in API routes with try/catch
+- ALWAYS return proper HTTP status codes
+- USE SWR for client-side data fetching
+- USE Formik for form management
+- USE Zod for API request validation
+
+### TypeScript Standards
+- ALWAYS define explicit types for props, state, and function parameters
+- ALWAYS use Prisma generated types: `import { User, Venue } from '@prisma/client'`
+- NEVER use `any` type - use `unknown` if type is truly unknown
+- USE type inference where appropriate (let TypeScript infer return types)
+- USE interfaces for object shapes, types for unions/intersections
+- PREFER `type` for Prisma model extensions: `type SerializedVenue = Omit<Venue, 'pricePerSong'> & { pricePerSong: number | null }`
+
+### Code Style
+- ALWAYS use async/await over promises
+- ALWAYS handle errors with try/catch blocks
+- ALWAYS use optional chaining (`?.`) and nullish coalescing (`??`)
+- USE destructuring for props and objects
+- USE template literals for strings with variables
+- PREFER arrow functions for callbacks
+- USE meaningful variable names (avoid abbreviations)
+
+### Import Organization
+```typescript
+// 1. External libraries
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+// 2. Internal absolute imports (@/)
+import { ApiError } from '@/lib/errors';
+import { prisma } from '@/lib/prisma';
+
+// 3. Relative imports
+import { CreateVenueForm } from './CreateVenueForm';
+```
+
+## 🧪 Testing Guidelines
+
+### Test File Naming
+- Unit tests: `*.spec.ts` or `*.test.ts`
+- E2E tests: `*.spec.ts` in `/tests/e2e/`
+- ALWAYS co-locate test files with source files when possible
+
+### Test Structure
+- USE descriptive test names: `describe('createVenue', () => { it('should create venue with valid data', ...) })`
+- ALWAYS test error cases, not just happy paths
+- USE mocks for external dependencies (n8n, Spotify API)
+- USE fixtures for test data
+
+### E2E Testing (Playwright)
+- ALWAYS use page objects for complex interactions
+- ALWAYS wait for elements before interacting
+- USE data-testid attributes for reliable selectors
+- TEST critical user flows end-to-end
+
+## 📝 Code Quality Standards
+
+### Error Handling
+- ALWAYS use custom error classes: `ApiError` from `@/lib/errors`
+- ALWAYS log errors with context: `logger.error('message', { context })`
+- ALWAYS return user-friendly error messages
+- NEVER expose internal errors to users
+
+### Logging
+- USE structured logging: `logger.info('message', { type: 'operation', data })`
+- LOG all database operations (already configured)
+- LOG all n8n webhook calls (already configured)
+- LOG errors with stack traces
+
+### Performance
+- USE `React.memo()` for expensive components
+- USE `useMemo()` for expensive calculations
+- USE `useCallback()` for stable function references
+- LAZY load heavy components with `next/dynamic`
+- OPTIMIZE images with Next.js Image component
+
+### Security
+- ALWAYS validate user input with Zod schemas
+- ALWAYS check authentication in API routes
+- ALWAYS check authorization (permissions) before operations
+- NEVER expose sensitive data in API responses
+- USE environment variables for secrets (never commit)
+
+## 🎨 UI/UX Guidelines
+
+### Component Patterns
+- USE DaisyUI components when available
+- USE Tailwind utility classes for styling
+- FOLLOW existing design patterns in codebase
+- USE toast notifications for user feedback: `toast.success('message')`
+- USE loading states for async operations
+
+### Form Handling
+- ALWAYS use Formik for forms
+- ALWAYS validate with Yup schemas
+- ALWAYS show validation errors inline
+- ALWAYS disable submit button during submission
+- USE optimistic UI updates where appropriate
+
+### Internationalization
+- ALWAYS use `useTranslation` hook: `const { t } = useTranslation('common')`
+- ALWAYS add translation keys to `locales/en/common.json`
+- NEVER hardcode user-facing strings
+- USE translation keys: `t('venue-created')`
+
+## 📚 Reference Files
+
+- Schema: `prisma/schema.prisma`
+- Migrations: `prisma/migrations/`
+- Verification: `scripts/verify-database-schema.sh`
+- Workflow Rules: `DEVELOPMENT-WORKFLOW-RULES.md`
+- API Docs: `ROCKOLA-API-FOR-N8N.md`
+- Backlog: `PRODUCT-BACKLOG.md`

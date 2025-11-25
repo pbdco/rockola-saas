@@ -26,34 +26,198 @@ Blog - [Enterprise-ready Saas Starter Kit](https://boxyhq.com/blog/enterprise-re
 
 Next.js-based SaaS starter kit saves you months of development by starting you off with all the features that are the same in every product, so you can focus on what makes your app unique.
 
-## 🛠️ Built With
+## 🛠️ Tech Stack
 
-- [Next.js](https://nextjs.org)
-  This is a React framework that provides features such as server-side rendering and static site generation. It's used for building the user interface of your application. The main configuration for Next.js can be found in `next.config.js`.
-- [Tailwind CSS](https://tailwindcss.com)
-  This is a utility-first CSS framework for rapidly building custom user interfaces. It's used for styling the application. The configuration for Tailwind CSS can be found in `postcss.config.js`.
-- [Postgres](https://www.postgresql.org)
-  This is a powerful, open source object-relational database system. It's used for storing application data. The connection to Postgres is likely managed through Prisma.
-- [React](https://reactjs.org)
-  This is a JavaScript library for building user interfaces. It's used for creating the interactive elements of your application. The React components are located in the components directory.
-- [Prisma](https://www.prisma.io)
-  This is an open-source database toolkit. It's used for object-relational mapping, which simplifies the process of writing database queries. Prisma configuration and schema can be found in the prisma directory.
-- [TypeScript](https://www.typescriptlang.org)
-  This is a typed superset of JavaScript that compiles to plain JavaScript. It's used to make the code more robust and maintainable. TypeScript definitions and configurations can be found in files like `next-env.d.ts` and `i18next.d.ts`.
-- [SAML Jackson](https://github.com/boxyhq/jackson) (Provides SAML SSO, Directory Sync)
-  This is a service for handling SAML SSO (Single Sign-On). It's used to allow users to sign in with a single ID and password to any of several related systems i.e (using a single set of credentials). The implementation of SAML Jackson is primarily located within the files associated with authentication.
-- [Svix](https://www.svix.com/) (Provides Webhook Orchestration)
-  This is a service for handling webhooks. It's used to emit events on user/team CRUD operations, which can then be caught and handled by other parts of the application or external services. The integration of Svix is distributed throughout the codebase, primarily in areas where Create, Read, Update, and Delete (CRUD) operations are executed.
-- [Retraced](https://github.com/retracedhq/retraced) (Provides Audit Logs Service)
-  This is a service for audit logging and data visibility. It helps track user activities within the application i.e (who did what and when in the application). The usage of Retraced would be dispersed throughout the codebase, likely in the files where important actions are performed.
-- [Stripe](https://stripe.com) (Provides Payments)
-  This is a service for handling payments. It's used to process payments for the application. The integration of Stripe is likely found in the files associated with billing and subscriptions.
-- [Playwright](https://playwright.dev) (Provides E2E tests)
-  This is a Node.js library for automating browsers. It's used to run end-to-end tests on the application. The Playwright configuration and tests can be found in the tests directory.
-- [Docker](https://www.docker.com) (Provides Docker Compose)
-  This is a platform for developing, shipping, and running applications. It's used to containerize the application and its dependencies. The Docker configuration can be found in the Dockerfile and docker-compose.yml.
-- [NextAuth.js](https://next-auth.js.org) (Provides Authentication)
-  This is a complete open-source authentication solution for Next.js applications. It's used to handle user authentication and authorization. The NextAuth.js configuration and providers can be found in the `pages/api/auth/[...nextauth].ts` file.
+### Core Framework & Runtime
+- **[Next.js 15.3.3](https://nextjs.org)** - React framework with SSR, SSG, and API routes
+  - Production-ready, stable release
+  - Uses standalone output mode for optimized Docker deployments
+  - Configuration: `next.config.js`
+- **[Node.js 20.19.5 LTS](https://nodejs.org)** - JavaScript runtime (Alpine Linux base)
+  - ⚠️ **Status**: Currently in Maintenance LTS phase (until April 2026)
+  - **Recommendation**: Consider upgrading to Node.js 22 LTS for active support
+  - Running in Docker container: `node:20-alpine`
+- **[React 18.3.1](https://reactjs.org)** - UI library for building interactive components
+  - Latest stable version with concurrent features
+- **[TypeScript 5.8.3](https://www.typescriptlang.org)** - Typed JavaScript superset
+  - Latest stable version with enhanced type safety
+
+### Database & ORM
+- **[PostgreSQL 16.4](https://www.postgresql.org)** - Relational database
+  - Latest stable release, production-ready
+  - Running in Docker: `postgres:16.4`
+  - Connection managed via Prisma ORM
+- **[Prisma 6.9.0](https://www.prisma.io)** - Next-generation ORM
+  - ⚠️ **Status**: Latest is 6.19.0 (released Nov 2025)
+  - **Recommendation**: Update to latest for bug fixes and performance improvements
+  - Schema: `prisma/schema.prisma`
+  - Migrations: `prisma/migrations/`
+
+### Styling & UI
+- **[Tailwind CSS 3.4.17](https://tailwindcss.com)** - Utility-first CSS framework
+  - Configuration: `tailwind.config.js`
+- **[DaisyUI 4.12.24](https://daisyui.com)** - Component library for Tailwind
+  - Themes: Corporate, Black (dark mode support)
+- **[React DaisyUI 5.0.5](https://react-daisyui.vercel.app)** - React components for DaisyUI
+- **[Heroicons 2.2.0](https://heroicons.com)** - Icon library
+
+### Authentication & Security
+- **[NextAuth.js 4.24.11](https://next-auth.js.org)** - Authentication framework
+  - ⚠️ **Status**: NextAuth v5 (Auth.js) is available but not yet migrated
+  - Supports: Email, Magic Link, GitHub, Google, SAML SSO
+  - Session strategy: JWT (configurable)
+  - Configuration: `lib/nextAuth.ts`
+- **[SAML Jackson 1.49.0](https://github.com/boxyhq/jackson)** - SAML SSO & Directory Sync
+  - Embedded Jackson for SSO and SCIM directory sync
+  - Configuration: `lib/jackson/`
+- **[bcryptjs 3.0.2](https://github.com/dcodeIO/bcrypt.js)** - Password hashing
+- **Security Headers** - CSP, HSTS, X-Frame-Options configured in `middleware.ts`
+
+### Third-Party Services
+- **[Svix](https://www.svix.com/)** - Webhook orchestration service
+  - Event emission for user/team CRUD operations
+- **[Retraced](https://github.com/retracedhq/retraced)** - Audit logging service
+  - Tracks user activities and system events
+- **[Stripe 17.7.0](https://stripe.com)** - Payment processing
+  - Latest SDK version
+- **[Sentry 9.29.0](https://sentry.io)** - Error tracking and monitoring
+  - Next.js integration with source maps support
+- **[n8n](https://n8n.io)** - Workflow automation (custom integration)
+  - Webhook client: `lib/n8n-webhooks.ts`
+  - Used for Spotify playlist management and automation
+
+### Form Management & Validation
+- **[Formik 2.4.6](https://formik.org)** - Form state management
+- **[Yup 1.6.1](https://github.com/jquense/yup)** - Schema validation (used with Formik)
+- **[Zod 3.25.64](https://zod.dev)** - TypeScript-first schema validation
+  - Primary validation library for API endpoints
+  - Configuration: `lib/zod/`
+
+### State Management & Data Fetching
+- **[SWR 2.3.3](https://swr.vercel.app)** - Data fetching with React Hooks
+  - Client-side data synchronization
+- **React Context** - For theme and user state
+
+### Internationalization
+- **[next-i18next 15.4.2](https://github.com/i18next/next-i18next)** - i18n for Next.js
+- **[i18next 25.2.1](https://www.i18next.com)** - Internationalization framework
+- **[react-i18next 15.5.3](https://react.i18next.com)** - React bindings for i18next
+
+### Email
+- **[Nodemailer 6.10.1](https://nodemailer.com)** - Email sending
+- **[React Email 4.0.16](https://react.email)** - Email template components
+- **[@react-email/components 0.0.42](https://react.email/components)** - Email UI components
+
+### Testing
+- **[Playwright 1.53.0](https://playwright.dev)** - End-to-end testing
+  - Configuration: `playwright.config.ts`
+  - Tests: `tests/e2e/`
+- **[Jest 30.0.0](https://jestjs.io)** - Unit testing framework
+  - Configuration: `jest.config.js`
+- **[Testing Library 6.6.3](https://testing-library.com)** - React component testing
+
+### Development Tools
+- **[ESLint 9.28.0](https://eslint.org)** - Code linting
+  - Configuration: `eslint.config.cjs`
+  - Plugins: TypeScript, i18next, Next.js
+- **[Prettier 3.5.3](https://prettier.io)** - Code formatting
+- **[Docker & Docker Compose](https://www.docker.com)** - Containerization
+  - Multi-stage Dockerfile for optimized builds
+  - `docker-compose.yml` for local development
+  - Services: PostgreSQL, Next.js app
+
+### Monitoring & Analytics
+- **[Mixpanel](https://mixpanel.com)** - Product analytics (optional)
+- **[OpenTelemetry](https://opentelemetry.io)** - Observability (optional)
+  - Metrics export support
+
+### Additional Libraries
+- **[Sharp 0.34.2](https://sharp.pixelplumbing.com)** - Image processing
+- **[Slack Notify 2.0.7](https://github.com/andrewsuzuki/slack-notify)** - Slack notifications
+- **[React Hot Toast 2.5.2](https://react-hot-toast.com)** - Toast notifications
+- **[Currency Symbol Map 5.1.0](https://github.com/bengourley/currency-symbol-map)** - Currency utilities
+
+## 📊 Production Readiness Assessment
+
+### ✅ Production-Ready Components
+- **Next.js 15.3.3** - Stable, widely used in production
+- **PostgreSQL 16.4** - Latest stable, enterprise-grade
+- **React 18.3.1** - Mature, production-proven
+- **TypeScript 5.8.3** - Latest stable
+- **Docker Setup** - Optimized multi-stage builds
+- **Security Headers** - Comprehensive CSP and security headers
+- **Error Tracking** - Sentry integration for production monitoring
+- **Structured Logging** - Custom logger with JSON output for Docker logs
+
+### ⚠️ Recommended Updates
+1. **Node.js 20 → 22 LTS**
+   - Current: Node.js 20.19.5 (Maintenance LTS until April 2026)
+   - Recommended: Upgrade to Node.js 22 LTS for active support
+   - Impact: Better performance, security updates, longer support
+   - Action: Update `Dockerfile` base image to `node:22-alpine`
+
+2. **Prisma 6.9.0 → 6.19.0**
+   - Current: Prisma 6.9.0
+   - Latest: Prisma 6.19.0 (released Nov 2025)
+   - Impact: Bug fixes, performance improvements, new features
+   - Action: Run `npm update @prisma/client prisma`
+
+3. **Next.js 15.3.3 → 16.x (Optional)**
+   - Current: Next.js 15.3.3 (LTS until Oct 2026)
+   - Latest: Next.js 16.x with stable Turbopack
+   - Impact: 3x faster builds, 5x faster dev server
+   - Action: Consider upgrading after testing (breaking changes possible)
+
+4. **NextAuth.js 4.24.11 → 5.x (Future)**
+   - Current: NextAuth v4 (stable)
+   - Latest: NextAuth v5 (Auth.js) - major rewrite
+   - Impact: Better TypeScript support, improved API
+   - Action: Plan migration for future (breaking changes)
+
+### 🔒 Security Status
+- ✅ Security headers configured (CSP, HSTS, X-Frame-Options)
+- ✅ Password hashing with bcryptjs
+- ✅ JWT session management
+- ✅ API key authentication support
+- ✅ Rate limiting ready (account lockout implemented)
+- ✅ Input validation with Zod schemas
+- ✅ SQL injection protection via Prisma
+- ✅ XSS protection via React and CSP headers
+
+### 📈 Performance Optimizations
+- ✅ Next.js standalone output for smaller Docker images
+- ✅ Image optimization with Sharp
+- ✅ SWR for efficient data fetching and caching
+- ✅ Database indexing via Prisma
+- ✅ Multi-stage Docker builds for smaller images
+
+### 🐳 Docker & Deployment
+- ✅ Multi-stage Dockerfile for optimized production builds
+- ✅ Docker Compose for local development
+- ✅ Health checks configured for database
+- ✅ Environment variable management
+- ✅ Non-root user in production container
+- ✅ Standalone Next.js output for minimal dependencies
+
+### 📝 Summary
+**Overall Assessment: ✅ Production-Ready with Recommended Updates**
+
+The tech stack is **solid and production-ready** with modern, well-maintained technologies. The application uses:
+- Latest stable versions of core frameworks (Next.js, React, TypeScript)
+- Enterprise-grade database (PostgreSQL 16.4)
+- Comprehensive security measures
+- Optimized Docker deployment setup
+- Professional monitoring and error tracking
+
+**Urgent Actions (Recommended but not blocking):**
+1. ⚠️ **Node.js 20 → 22 LTS**: Upgrade for active LTS support (currently in maintenance phase)
+2. ⚠️ **Prisma 6.9.0 → 6.19.0**: Update for latest bug fixes and performance improvements
+
+**Future Considerations:**
+- Next.js 16.x migration for Turbopack performance gains (when ready)
+- NextAuth v5 migration (plan for future, breaking changes expected)
+
+**No Critical Issues Found** - The stack is ready for production deployment as-is, with the recommended updates being optimizations rather than requirements.
 
 ## 🚀 Deployment
 

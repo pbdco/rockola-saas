@@ -7,21 +7,34 @@ import type { ApiResponse } from 'types';
 import type { SerializedVenue } from 'models/venue';
 import useVenues from 'hooks/useVenues';
 import { slugify } from '@/lib/server-common';
+import type { VenueMode } from '@prisma/client';
 
 interface CreateVenueFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
+interface FormValues {
+  name: string;
+  address: string;
+  mode: VenueMode;
+  spotifyClientId: string;
+  spotifyClientSecret: string;
+  pricingEnabled: boolean;
+  pricePerSong: string;
+  currency: string;
+  isActive: boolean;
+}
+
 const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
   const { t } = useTranslation('common');
   const { mutate } = useVenues();
 
-  const formik = useFormik({
+  const formik = useFormik<FormValues>({
     initialValues: {
       name: '',
       address: '',
-      mode: 'QUEUE' as const,
+      mode: 'PLAYLIST',
       spotifyClientId: '',
       spotifyClientSecret: '',
       pricingEnabled: false,
@@ -31,13 +44,21 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
     },
     onSubmit: async (values) => {
       try {
+        // Validate Spotify credentials for Automation Mode
+        if (values.mode === 'AUTOMATION') {
+          if (!values.spotifyClientId || !values.spotifyClientSecret) {
+            toast.error(t('spotify-credentials-required-for-automation'));
+            return;
+          }
+        }
+
         const payload = {
           name: values.name,
           // Slug is auto-generated from name on the backend
           address: values.address || undefined,
           mode: values.mode,
-          spotifyClientId: values.spotifyClientId || undefined,
-          spotifyClientSecret: values.spotifyClientSecret || undefined,
+          spotifyClientId: values.mode === 'AUTOMATION' ? values.spotifyClientId : undefined,
+          spotifyClientSecret: values.mode === 'AUTOMATION' ? values.spotifyClientSecret : undefined,
           pricingEnabled: values.pricingEnabled,
           pricePerSong:
             values.pricingEnabled && values.pricePerSong
@@ -115,7 +136,6 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
           value={formik.values.mode}
           onChange={formik.handleChange}
         >
-          <option value="QUEUE">{t('mode-queue')}</option>
           <option value="PLAYLIST">{t('mode-playlist')}</option>
           <option value="AUTOMATION">{t('mode-automation')}</option>
         </Select>
@@ -124,48 +144,54 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
         </label>
       </div>
 
-      {/* Spotify Credentials Section */}
-      <div className="divider">{t('spotify-credentials')}</div>
-      
-      <div className="alert alert-info">
-        <span className="text-sm">{t('spotify-credentials-help')}</span>
-      </div>
+      {/* Spotify Credentials Section - Only for Automation Mode */}
+      {formik.values.mode === 'AUTOMATION' && (
+        <>
+          <div className="divider">{t('spotify-credentials')}</div>
+          
+          <div className="alert alert-info">
+            <span className="text-sm" dangerouslySetInnerHTML={{ __html: t('spotify-credentials-help-automation') }} />
+          </div>
 
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text">{t('spotify-client-id')}</span>
-          <span className="label-text-alt">{t('optional')}</span>
-        </label>
-        <Input
-          name="spotifyClientId"
-          type="text"
-          placeholder={t('spotify-client-id-placeholder')}
-          value={formik.values.spotifyClientId}
-          onChange={formik.handleChange}
-        />
-        <label className="label">
-          <span className="label-text-alt">{t('spotify-client-id-help')}</span>
-        </label>
-      </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('spotify-client-id')}</span>
+              <span className="label-text-alt text-error">{t('required')}</span>
+            </label>
+            <Input
+              name="spotifyClientId"
+              type="text"
+              placeholder={t('spotify-client-id-placeholder')}
+              value={formik.values.spotifyClientId}
+              onChange={formik.handleChange}
+              required={formik.values.mode === 'AUTOMATION'}
+            />
+            <label className="label">
+              <span className="label-text-alt">{t('spotify-client-id-help')}</span>
+            </label>
+          </div>
 
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text">{t('spotify-client-secret')}</span>
-          <span className="label-text-alt">{t('optional')}</span>
-        </label>
-        <Input
-          name="spotifyClientSecret"
-          type="password"
-          placeholder={t('spotify-client-secret-placeholder')}
-          value={formik.values.spotifyClientSecret}
-          onChange={formik.handleChange}
-        />
-        <label className="label">
-          <span className="label-text-alt">{t('spotify-client-secret-help')}</span>
-        </label>
-      </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('spotify-client-secret')}</span>
+              <span className="label-text-alt text-error">{t('required')}</span>
+            </label>
+            <Input
+              name="spotifyClientSecret"
+              type="password"
+              placeholder={t('spotify-client-secret-placeholder')}
+              value={formik.values.spotifyClientSecret}
+              onChange={formik.handleChange}
+              required={formik.values.mode === 'AUTOMATION'}
+            />
+            <label className="label">
+              <span className="label-text-alt">{t('spotify-client-secret-help')}</span>
+            </label>
+          </div>
 
-      <div className="divider"></div>
+          <div className="divider"></div>
+        </>
+      )}
 
       <div className="form-control">
         <label className="label cursor-pointer justify-start gap-2">

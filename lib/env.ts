@@ -125,12 +125,22 @@ const env = {
   spotify: {
     clientId: process.env.SPOTIFY_CLIENT_ID || '',
     clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+    defaultClientId: process.env.SPOTIFY_DEFAULT_CLIENT_ID || process.env.SPOTIFY_CLIENT_ID || '',
+    defaultClientSecret: process.env.SPOTIFY_DEFAULT_CLIENT_SECRET || process.env.SPOTIFY_CLIENT_SECRET || '',
   },
 
   n8n: {
     webhookUrl: process.env.N8N_WEBHOOK_URL || '',
     apiKey: process.env.N8N_API_KEY || '',
     webhookSecret: process.env.N8N_WEBHOOK_SECRET || '',
+    webhooks: {
+      createPlaylist: process.env.N8N_WEBHOOK_CREATE_PLAYLIST_URL || `${process.env.N8N_WEBHOOK_URL || ''}/create-playlist`,
+      validateRules: process.env.N8N_WEBHOOK_VALIDATE_RULES_URL || `${process.env.N8N_WEBHOOK_URL || ''}/validate-rules`,
+      addSongToPlaylist: process.env.N8N_WEBHOOK_ADD_SONG_TO_PLAYLIST_URL || `${process.env.N8N_WEBHOOK_URL || ''}/add-song-to-playlist`,
+      searchTrack: process.env.N8N_WEBHOOK_SEARCH_TRACK_URL || `${process.env.N8N_WEBHOOK_URL || ''}/search-track`,
+      addSongToQueue: process.env.N8N_WEBHOOK_ADD_SONG_TO_QUEUE_URL || `${process.env.N8N_WEBHOOK_URL || ''}/add-song-to-queue`,
+      skipTrack: process.env.N8N_WEBHOOK_SKIP_TRACK_URL || `${process.env.N8N_WEBHOOK_URL || ''}/skip-track`,
+    },
   },
 };
 

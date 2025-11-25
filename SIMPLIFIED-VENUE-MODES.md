@@ -27,7 +27,11 @@ Rockola will support **two operating modes** (removing Queue Mode). Each mode ha
 - ✅ **Automatic playlist creation** - One playlist per venue
 - ✅ **Simple song addition** - Just add tracks to playlist
 - ✅ **Playlist link in UI** - Venue owner can easily access and follow playlist
-- ✅ **Credit-based payment** - Mock credits for testing
+- ✅ **Credit-based request limits** - Control who can request and how much
+  - **Cost per request**: $0 to unlimited (venue owner configurable)
+  - **Max requests per user**: Limit total requests per patron (e.g., "max 2 songs per guest")
+  - **Combined with rules**: Can limit by credits + request count + music rules
+  - **Perfect for parties**: "Each guest can request 2 free songs from our playlist"
 - ✅ **Rate limiting** - Prevents spam
 
 #### **Technical Details:**
@@ -75,12 +79,17 @@ Same as Playlist Mode Basic, **PLUS**:
 
 #### **Key Features:**
 - ✅ Everything from Playlist Mode Basic
+- ✅ **Credit-based request limits** - Same as Basic (cost + max requests per user)
 - ✅ **Rules System** - Content curation via natural language
 - ✅ **Blacklists** - Per hour/day/all day
 - ✅ **Genre Restrictions** - "Only reggae", "No trap"
 - ✅ **Artist Restrictions** - "Not allow Rolling Stones"
 - ✅ **Time-Based Rules** - "No explicit after 11 PM"
 - ✅ **AI Integration** - Rules stored as system prompt for bot
+- ✅ **Triple Filtering**: Requests must pass:
+  1. Credit check (has enough credits, hasn't exceeded max requests)
+  2. Music rules (genre, artist, explicit, time-based)
+  3. Catalog check (if in Catalogue Mode)
 
 #### **Rules System:**
 Rules are defined in **natural language** by venue owner:
@@ -160,6 +169,13 @@ Rules are defined in **natural language** by venue owner:
 - ✅ **Time-based automation** - Auto-switch playlists, adjust settings
 - ✅ **Auto-moderation** - Skip songs based on crowd feedback
 - ✅ **Device control** - Switch between Spotify devices
+- ✅ **Time-Based Request Limits** ⭐ **NEW FEATURE**
+  - Track total duration of queued songs
+  - Compare against venue's remaining opening hours
+  - Stop accepting requests when no time left
+  - **Guarantee paid requests will play** - Ensures all paid/credited songs play before closing
+  - Optional feature (venue owner can enable/disable)
+  - Example: Bar 11 PM - 5 AM, stops accepting requests when queue fills remaining time
 - ✅ **Future: AI Analysis** - Control music based on feedback and other inputs
 
 ### **Technical Details:**

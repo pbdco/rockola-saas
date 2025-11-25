@@ -13,9 +13,15 @@ enum Role {
 }
 
 enum VenueMode {
-  QUEUE
   PLAYLIST
   AUTOMATION
+}
+
+enum RuleType {
+  CONTENT
+  TIME
+  PRICING
+  REQUESTS
 }
 
 enum RequestStatus {
@@ -163,7 +169,7 @@ model Venue {
   name                  String
   slug                  String         @unique
   address               String?
-  mode                  VenueMode      @default(QUEUE)
+  mode                  VenueMode      @default(PLAYLIST)
   spotifyClientId       String?
   spotifyClientSecret   String?        @db.Text
   spotifyUserId         String?
@@ -171,6 +177,8 @@ model Venue {
   spotifyAccessToken    String?        @db.Text
   spotifyRefreshToken   String?        @db.Text
   spotifyTokenExpiresAt DateTime?
+  spotifyPlaylistId     String?
+  spotifyPlaylistUrl    String?
   n8nCredentialId       String?
   pricingEnabled        Boolean        @default(false)
   pricePerSong          Decimal?       @db.Decimal(10, 2)
@@ -183,6 +191,7 @@ model Venue {
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   songRequests  SongRequest[]
   payments      Payment[]
+  rules         VenueRule[]
 
   @@index([userId])
 }
@@ -232,6 +241,25 @@ model Payment {
 
   @@index([venueId])
   @@index([status])
+}
+
+model VenueRule {
+  id          String   @id @default(uuid())
+  venueId     String
+  name        String
+  description String?
+  type        RuleType
+  enabled     Boolean  @default(true)
+  priority    Int      @default(10)
+  conditions  Json?    // Time conditions, day conditions, etc.
+  actions     Json     // What to do (allow/deny, genre filter, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@index([venueId, enabled])
 }
 
 model jackson_store {
