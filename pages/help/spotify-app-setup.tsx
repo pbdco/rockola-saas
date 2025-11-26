@@ -5,6 +5,10 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { GetServerSidePropsContext } from 'next';
 import Link from 'next/link';
 
+// Use APP_URL from environment for examples, with localhost fallback for dev
+const appUrl = process.env.APP_URL || 'http://localhost:4002';
+const spotifyCallbackUrl = `${appUrl}/api/spotify/callback`;
+
 export default function SpotifyAppSetupHelp() {
 
   return (
@@ -42,7 +46,7 @@ export default function SpotifyAppSetupHelp() {
             <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
               <li><strong>App name:</strong> Choose a name for your app (e.g., "Rockola Venue Control")</li>
               <li><strong>App description:</strong> Describe what your app does (e.g., "Music playback control for venue management")</li>
-              <li><strong>Redirect URI:</strong> Add your app's callback URL. For Rockola, use: <code className="bg-base-200 px-2 py-1 rounded">http://localhost:4002/api/spotify/callback</code> (or your production URL)</li>
+              <li><strong>Redirect URI:</strong> Add your app's callback URL. For Rockola, use: <code className="bg-base-200 px-2 py-1 rounded">{spotifyCallbackUrl}</code> (or your production URL)</li>
               <li><strong>Website:</strong> Your website URL (optional)</li>
             </ul>
           </li>
@@ -63,14 +67,15 @@ export default function SpotifyAppSetupHelp() {
           </li>
         </ol>
 
-        <h2 className="text-2xl font-semibold mt-8 mb-4">Step 4: Configure Redirect URIs</h2>
+        <h2 className="text-2xl font-semibold mt-8 mb-4">Step 4: Configure Redirect URI</h2>
         <div className="bg-base-200 p-4 rounded-lg mb-4">
-          <p className="mb-2">Make sure to add the correct redirect URI for your environment:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li><strong>Development:</strong> <code>http://localhost:4002/api/spotify/callback</code></li>
-            <li><strong>Production:</strong> <code>https://yourdomain.com/api/spotify/callback</code></li>
-          </ul>
-          <p className="mt-2 text-sm">You can add multiple redirect URIs if needed. Click "Edit Settings" on your app dashboard to configure these.</p>
+          <p className="mb-2">
+            In your Spotify app settings, add the following redirect URI (exactly as shown):
+          </p>
+          <code className="bg-base-300 px-2 py-1 rounded block">{spotifyCallbackUrl}</code>
+          <p className="mt-2 text-sm">
+            This must match the value configured in Rockola under the Spotify callback URL.
+          </p>
         </div>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">Step 5: Enter Credentials in Rockola</h2>

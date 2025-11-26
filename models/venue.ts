@@ -103,6 +103,7 @@ export const createVenue = async (
     slug?: string;
     address?: string;
     mode: VenueMode;
+    requiresLocationCheck?: boolean;
     pricingEnabled?: boolean;
     pricePerSong?: number | null;
     currency?: string;
@@ -121,6 +122,7 @@ export const createVenue = async (
       slug,
       address: data.address,
       mode: data.mode,
+      requiresLocationCheck: Boolean(data.requiresLocationCheck),
       pricingEnabled: Boolean(data.pricingEnabled),
       pricePerSong:
         data.pricingEnabled && typeof data.pricePerSong === 'number'
@@ -220,6 +222,7 @@ export const updateVenue = async (
     slug?: string;
     address?: string;
     mode: VenueMode;
+    requiresLocationCheck?: boolean;
     pricingEnabled?: boolean;
     pricePerSong?: number | null;
     currency?: string;
@@ -266,6 +269,10 @@ export const updateVenue = async (
       slug: finalSlug,
       address: data.address ?? existing.address,
       mode: finalMode,
+      requiresLocationCheck:
+        typeof data.requiresLocationCheck === 'boolean'
+          ? data.requiresLocationCheck
+          : (existing as any).requiresLocationCheck ?? false,
       pricingEnabled: finalPricingEnabled,
       pricePerSong: finalPricingEnabled
         ? typeof data.pricePerSong === 'number'

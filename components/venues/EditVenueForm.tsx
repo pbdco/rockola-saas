@@ -87,6 +87,7 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
       pricePerSong: venue.pricePerSong?.toString() || '',
       currency: venue.currency || 'USD',
       isActive: venue.isActive,
+      requiresLocationCheck: (venue as any).requiresLocationCheck ?? false,
     },
     onSubmit: async (values) => {
       try {
@@ -104,6 +105,7 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
           slug: values.slug?.trim() || undefined,
           address: values.address || undefined,
           mode: values.mode,
+          requiresLocationCheck: values.requiresLocationCheck,
           spotifyClientId: values.mode === 'AUTOMATION' ? values.spotifyClientId : undefined,
           spotifyClientSecret: values.mode === 'AUTOMATION' ? values.spotifyClientSecret : undefined,
           pricingEnabled: values.pricingEnabled,
@@ -144,6 +146,7 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
           pricePerSong: updatedVenue.pricePerSong?.toString() || '',
           currency: updatedVenue.currency || 'USD',
           isActive: updatedVenue.isActive,
+          requiresLocationCheck: (updatedVenue as any).requiresLocationCheck ?? false,
         });
 
         // Clear slug warning after successful save
@@ -252,6 +255,30 @@ const EditVenueForm = ({ venue, onSuccess, onCancel, onVenueUpdate }: EditVenueF
             value={formik.values.address}
             onChange={formik.handleChange}
           />
+        </div>
+
+        <div className="form-control">
+          <label className="label cursor-pointer justify-start gap-2">
+            <Checkbox
+              name="requiresLocationCheck"
+              checked={formik.values.requiresLocationCheck}
+              onChange={(e) => {
+                if (e.target.checked && !formik.values.address.trim()) {
+                  toast.error(t('location-check-address-required'));
+                  return;
+                }
+                formik.setFieldValue('requiresLocationCheck', e.target.checked);
+              }}
+            />
+            <span className="label-text font-medium">
+              {t('requires-location-check')}
+            </span>
+          </label>
+          <label className="label">
+            <span className="label-text-alt">
+              {t('requires-location-check-help')}
+            </span>
+          </label>
         </div>
 
         <div className="form-control">

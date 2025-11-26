@@ -92,6 +92,7 @@ const SpotifyConnect = ({ venue }: SpotifyConnectProps) => {
               size="sm"
               color="error"
               variant="outline"
+              className="border-amber-700 text-amber-800 hover:bg-amber-50 dark:border-amber-500 dark:text-amber-300 dark:hover:bg-amber-900/30"
               onClick={handleDisconnect}
               loading={disconnecting}
               disabled={disconnecting}
@@ -129,6 +130,7 @@ const SpotifyConnect = ({ venue }: SpotifyConnectProps) => {
             <Button
               size="sm"
               color="primary"
+              className="bg-amber-700 hover:bg-amber-800 border-none text-white dark:bg-amber-600 dark:hover:bg-amber-500"
               onClick={handleConnect}
               disabled={!hasCredentials}
             >

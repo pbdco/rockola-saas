@@ -23,7 +23,11 @@ const VenuesPage: NextPageWithLayout = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('venues')}</h1>
         <Link href="/venues/create">
-          <Button color="primary" size="md">
+          <Button
+            color="primary"
+            size="md"
+            className="bg-amber-700 hover:bg-amber-800 border-none text-white dark:bg-amber-600 dark:hover:bg-amber-500"
+          >
             {t('create-venue')}
           </Button>
         </Link>

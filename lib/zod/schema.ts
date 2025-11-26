@@ -61,6 +61,7 @@ const baseVenueSchema = z.object({
   slug: slug.optional(),
   address: venueAddress,
   mode: z.enum(['PLAYLIST', 'AUTOMATION']).default('PLAYLIST'),
+  requiresLocationCheck: z.boolean().optional().default(false),
   pricingEnabled: z.boolean().optional().default(false),
   pricePerSong: venuePrice,
   currency: venueCurrency,
@@ -69,27 +70,50 @@ const baseVenueSchema = z.object({
   spotifyClientSecret: z.string().optional(),
 });
 
-export const createVenueSchema = baseVenueSchema.refine((data) => {
-  // Spotify credentials required only for Automation Mode
-  if (data.mode === 'AUTOMATION') {
-    return !!(data.spotifyClientId && data.spotifyClientSecret);
-  }
-  return true;
-}, {
-  message: 'Spotify Client ID and Secret are required for Automation Mode',
-  path: ['spotifyClientId'],
-});
+export const createVenueSchema = baseVenueSchema
+  .refine((data) => {
+    // Spotify credentials required only for Automation Mode
+    if (data.mode === 'AUTOMATION') {
+      return !!(data.spotifyClientId && data.spotifyClientSecret);
+    }
+    return true;
+  }, {
+    message: 'Spotify Client ID and Secret are required for Automation Mode',
+    path: ['spotifyClientId'],
+  })
+  .refine((data) => {
+    // If location check is required, address must be provided
+    if (data.requiresLocationCheck) {
+      return !!data.address;
+    }
+    return true;
+  }, {
+    message: 'Address is required when location check is enabled',
+    path: ['address'],
+  });
 
-export const updateVenueSchema = baseVenueSchema.partial().refine((data) => {
-  // Spotify credentials required only for Automation Mode (if mode is being set to AUTOMATION)
-  if (data.mode === 'AUTOMATION') {
-    return !!(data.spotifyClientId && data.spotifyClientSecret);
-  }
-  return true;
-}, {
-  message: 'Spotify Client ID and Secret are required for Automation Mode',
-  path: ['spotifyClientId'],
-});
+export const updateVenueSchema = baseVenueSchema.partial()
+  .refine((data) => {
+    // Spotify credentials required only for Automation Mode (if mode is being set to AUTOMATION)
+    if (data.mode === 'AUTOMATION') {
+      return !!(data.spotifyClientId && data.spotifyClientSecret);
+    }
+    return true;
+  }, {
+    message: 'Spotify Client ID and Secret are required for Automation Mode',
+    path: ['spotifyClientId'],
+  })
+  .refine((data) => {
+    // On update, if payload sets requiresLocationCheck true,
+    // enforce that address is present in the same payload.
+    if (data.requiresLocationCheck === true) {
+      return !!data.address;
+    }
+    return true;
+  }, {
+    message: 'Address is required when location check is enabled',
+    path: ['address'],
+  });
 
 export const venueIdSchema = z.object({
   venueId,

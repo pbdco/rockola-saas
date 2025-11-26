@@ -170,6 +170,7 @@ model Venue {
   slug                  String         @unique
   address               String?
   mode                  VenueMode      @default(PLAYLIST)
+  requiresLocationCheck Boolean        @default(false)
   spotifyClientId       String?
   spotifyClientSecret   String?        @db.Text
   spotifyUserId         String?

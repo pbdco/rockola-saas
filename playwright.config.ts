@@ -1,5 +1,8 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test';
 
+// Prefer APP_URL from environment, fall back to localhost:4002 for local dev
+const appUrl = process.env.APP_URL || 'http://localhost:4002';
+
 const config: PlaywrightTestConfig = {
   workers: 1,
   globalSetup: require.resolve('./tests/e2e/support/globalSetup.ts'),
@@ -28,14 +31,14 @@ const config: PlaywrightTestConfig = {
   reporter: 'html',
   webServer: {
     command: 'npm run start',
-    url: 'http://localhost:4002',
+    url: appUrl,
     reuseExistingServer: !process.env.CI,
   },
   retries: 1,
   use: {
     headless: true,
     ignoreHTTPSErrors: true,
-    baseURL: 'http://localhost:4002',
+    baseURL: appUrl,
     trace: 'retain-on-first-failure',
   },
   testDir: './tests/e2e',

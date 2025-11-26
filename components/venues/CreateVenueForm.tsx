@@ -24,6 +24,7 @@ interface FormValues {
   pricePerSong: string;
   currency: string;
   isActive: boolean;
+   requiresLocationCheck: boolean;
 }
 
 const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
@@ -41,6 +42,7 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
       pricePerSong: '',
       currency: 'USD',
       isActive: true,
+      requiresLocationCheck: false,
     },
     onSubmit: async (values) => {
       try {
@@ -57,6 +59,7 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
           // Slug is auto-generated from name on the backend
           address: values.address || undefined,
           mode: values.mode,
+          requiresLocationCheck: values.requiresLocationCheck,
           spotifyClientId: values.mode === 'AUTOMATION' ? values.spotifyClientId : undefined,
           spotifyClientSecret: values.mode === 'AUTOMATION' ? values.spotifyClientSecret : undefined,
           pricingEnabled: values.pricingEnabled,
@@ -125,6 +128,31 @@ const CreateVenueForm = ({ onSuccess, onCancel }: CreateVenueFormProps) => {
           value={formik.values.address}
           onChange={formik.handleChange}
         />
+      </div>
+
+      <div className="form-control">
+        <label className="label cursor-pointer justify-start gap-2">
+          <Checkbox
+            name="requiresLocationCheck"
+            checked={formik.values.requiresLocationCheck}
+            onChange={(e) => {
+              // If enabling location check but no address, warn and keep disabled
+              if (e.target.checked && !formik.values.address.trim()) {
+                toast.error(t('location-check-address-required'));
+                return;
+              }
+              formik.setFieldValue('requiresLocationCheck', e.target.checked);
+            }}
+          />
+          <span className="label-text">
+            {t('requires-location-check')}
+          </span>
+        </label>
+        <label className="label">
+          <span className="label-text-alt">
+            {t('requires-location-check-help')}
+          </span>
+        </label>
       </div>
 
       <div className="form-control">

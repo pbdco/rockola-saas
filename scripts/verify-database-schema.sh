@@ -20,6 +20,7 @@ REQUIRED_VENUE_COLUMNS=(
     "slug"
     "address"
     "mode"
+    "requiresLocationCheck"
     "spotifyClientId"
     "spotifyClientSecret"
     "spotifyUserId"

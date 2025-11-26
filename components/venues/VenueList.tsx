@@ -148,6 +148,7 @@ const VenueList = ({ venues }: VenueListProps) => {
                       <Button
                         size="sm"
                         color="primary"
+                        className="bg-amber-700 hover:bg-amber-800 border-none text-white dark:bg-amber-600 dark:hover:bg-amber-500"
                         onClick={() => venue.spotifyPlaylistUrl && window.open(venue.spotifyPlaylistUrl, '_blank')}
                       >
                         <MusicalNoteIcon className="h-4 w-4 mr-2" />
