@@ -58,3 +58,7 @@ export const getUserFromRequest = async (
   // If no API key, return null (session will be checked separately)
   return null;
 };
+
+// Note: getN8nApiKey() function removed - we now use only N8N_WEBHOOK_SECRET
+// This follows standard webhook security patterns (Stripe, GitHub, etc.)
+// No API key management needed for n8n webhooks

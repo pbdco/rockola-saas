@@ -8,7 +8,7 @@ import { defaultHeaders } from 'lib/common';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import useVenues from 'hooks/useVenues';
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PencilIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
 import SpotifyConnect from './SpotifyConnect';
 
 interface VenueListProps {
@@ -72,9 +72,10 @@ const VenueList = ({ venues }: VenueListProps) => {
   return (
     <>
       <div className="space-y-4">
-        {venues.map((venue) => (
+        {venues.map((venue) => {
+          return (
           <div key={venue.id} className="rounded-lg border p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3">
                   <h3 className="text-lg font-semibold">{venue.name}</h3>
@@ -125,12 +126,56 @@ const VenueList = ({ venues }: VenueListProps) => {
               </div>
             </div>
 
-            {/* Spotify Connection Status */}
-            <div className="mt-4">
-              <SpotifyConnect venue={venue} />
-            </div>
+            {/* Playlist Box for PLAYLIST mode - full width like AUTOMATION box */}
+            {String(venue.mode).toUpperCase() === 'PLAYLIST' && venue.spotifyPlaylistUrl && (
+              <div className="mt-4">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 flex-shrink-0">
+                        <MusicalNoteIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-900 dark:text-green-100">
+                          {t('playlist-ready')}
+                        </p>
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          {t('playlist-description')}
+                        </p>
+                      </div>
+                    </div>
+                    <AccessControl resource="venue" actions={['update']}>
+                      <Button
+                        size="sm"
+                        color="primary"
+                        onClick={() => venue.spotifyPlaylistUrl && window.open(venue.spotifyPlaylistUrl, '_blank')}
+                      >
+                        <MusicalNoteIcon className="h-4 w-4 mr-2" />
+                        {t('open-playlist')}
+                      </Button>
+                    </AccessControl>
+                  </div>
+                </div>
+              </div>
+            )}
+            {String(venue.mode).toUpperCase() === 'PLAYLIST' && !venue.spotifyPlaylistUrl && (
+              <div className="mt-4">
+                <span className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  {t('playlist-creating')}
+                </span>
+              </div>
+            )}
+
+            {/* Spotify Connection Status - Only show for AUTOMATION mode */}
+            {/* PLAYLIST mode uses default Spotify credentials, no connection needed */}
+            {String(venue.mode).toUpperCase() !== 'PLAYLIST' && (
+              <div className="mt-4">
+                <SpotifyConnect venue={venue} />
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <ConfirmationDialog

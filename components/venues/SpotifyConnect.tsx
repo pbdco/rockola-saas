@@ -20,6 +20,17 @@ const SpotifyConnect = ({ venue }: SpotifyConnectProps) => {
   const isConnected = Boolean(venue.spotifyUserId);
   const hasCredentials = Boolean(venue.spotifyClientId && venue.spotifyClientSecret);
 
+  // For PLAYLIST mode, Spotify connection is not required (uses default credentials)
+  // Only show connection status for AUTOMATION mode
+  // Check mode with case-insensitive comparison for safety
+  const venueMode = venue.mode ? String(venue.mode).toUpperCase().trim() : '';
+  
+  // Early return for PLAYLIST mode - this should never render for PLAYLIST
+  if (venueMode === 'PLAYLIST') {
+    console.warn('[SpotifyConnect] Should not render for PLAYLIST mode! Mode:', venue.mode, 'Normalized:', venueMode);
+    return null;
+  }
+
   const handleConnect = () => {
     if (!hasCredentials) {
       toast.error(t('spotify-credentials-missing'));
@@ -93,38 +104,45 @@ const SpotifyConnect = ({ venue }: SpotifyConnectProps) => {
     );
   }
 
-  return (
-    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-            <MusicalNoteIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+  // For AUTOMATION mode, show connection prompt
+  // PLAYLIST mode doesn't need connection (handled above)
+  if (venueMode === 'AUTOMATION') {
+    return (
+      <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+              <MusicalNoteIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p className="font-medium text-yellow-900 dark:text-yellow-100">
+                {t('spotify-not-connected')}
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                {hasCredentials
+                  ? t('spotify-connect-description')
+                  : t('spotify-credentials-missing')}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-yellow-900 dark:text-yellow-100">
-              {t('spotify-not-connected')}
-            </p>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              {hasCredentials
-                ? t('spotify-connect-description')
-                : t('spotify-credentials-missing')}
-            </p>
-          </div>
+          <AccessControl resource="venue" actions={['update']}>
+            <Button
+              size="sm"
+              color="primary"
+              onClick={handleConnect}
+              disabled={!hasCredentials}
+            >
+              <MusicalNoteIcon className="h-4 w-4 mr-2" />
+              {t('connect-spotify')}
+            </Button>
+          </AccessControl>
         </div>
-        <AccessControl resource="venue" actions={['update']}>
-          <Button
-            size="sm"
-            color="primary"
-            onClick={handleConnect}
-            disabled={!hasCredentials}
-          >
-            <MusicalNoteIcon className="h-4 w-4 mr-2" />
-            {t('connect-spotify')}
-          </Button>
-        </AccessControl>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // For other modes (shouldn't happen, but return null to be safe)
+  return null;
 };
 
 export default SpotifyConnect;

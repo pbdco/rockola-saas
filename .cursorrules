@@ -54,6 +54,18 @@
 - ALWAYS test changes in Docker environment
 - ALWAYS check logs: `docker-compose logs app`
 - ALWAYS rebuild if schema changed: `docker-compose build app`
+- **AFTER CODE CHANGES (when required and ready to test): ALWAYS build Docker app and leave it running for user to test**
+  - Run: `docker-compose build app && docker-compose up -d app`
+  - Verify app is running: `docker-compose ps app`
+  - Check logs for errors: `docker-compose logs --tail=20 app | grep -i error`
+  - Confirm app is ready: Look for "Ready" message in logs
+- **API KEY TESTING: Run comprehensive test script ONLY when:**
+  - User explicitly requests it
+  - After making changes to authentication/authorization code
+  - After modifying API endpoints that affect API key authentication
+  - When debugging API key related issues
+  - **DO NOT run automatically on every code change**
+  - Script: `./test-api-key-comprehensive.sh [API_KEY]`
 - NEVER assume local environment matches Docker
 
 ## 📋 Pre-Commit Checklist
@@ -68,6 +80,8 @@ Before committing ANY changes:
 - [ ] Error handling in place
 - [ ] Tested in Docker environment
 - [ ] No errors in logs
+- [ ] **Docker app built and running (if code changes made and ready to test)**
+- [ ] **API key tests run (ONLY if auth/API endpoint changes made or user requested)**
 
 ## 🔍 When Making Database Changes
 
@@ -251,3 +265,6 @@ import { CreateVenueForm } from './CreateVenueForm';
 - Workflow Rules: `DEVELOPMENT-WORKFLOW-RULES.md`
 - API Docs: `ROCKOLA-API-FOR-N8N.md`
 - Backlog: `PRODUCT-BACKLOG.md`
+- **Test Scripts:**
+  - `./test-api-key-comprehensive.sh` - Comprehensive API key testing (run only when required)
+  - `./test-api.sh` - General API testing with session tokens

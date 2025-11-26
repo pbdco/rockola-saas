@@ -2,43 +2,34 @@
 
 ## 📋 Overview
 
-This document defines all N8N webhooks that Rockola will call, and all webhooks that n8n will call back to Rockola. All webhooks use API key + crypto signature for security.
+This document defines all N8N webhooks that Rockola will call, and all webhooks that n8n will call back to Rockola. All webhooks use **JWT authentication** for security.
 
 ---
 
-## 🔐 Security Headers (All Webhooks)
+## 🔐 Security: JWT Authentication
 
-All webhooks (both directions) must include:
+**All Rockola → n8n webhooks use JWT authentication:**
 
+**Request Headers:**
 ```
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature}
-```
-
-**Signature Calculation:**
-```typescript
-import crypto from 'crypto';
-
-function calculateSignature(body: string, secret: string): string {
-  const hmac = crypto.createHmac('sha256', secret);
-  return hmac.update(body).digest('hex');
-}
+Authorization: Bearer {JWT_TOKEN}
+Content-Type: application/json
 ```
 
-**Verification:**
-```typescript
-function verifySignature(
-  body: string,
-  signature: string,
-  secret: string
-): boolean {
-  const calculated = calculateSignature(body, secret);
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(calculatedSignature)
-  );
-}
-```
+**JWT Token:**
+- Contains webhook payload as claims
+- Signed with `N8N_WEBHOOK_SECRET` using HS256 algorithm
+- Expires in 5 minutes (`exp` claim)
+- Automatically verified by n8n (no Code node needed!)
+
+**n8n Configuration:**
+- Webhook node → Authentication → JWT Auth
+- JWT Credential with `N8N_WEBHOOK_SECRET`
+- Algorithm: HS256
+
+**Accessing Data in n8n:**
+- JWT payload available as `$json.jwtPayload`
+- Request body available as `$json.body`
 
 ---
 
@@ -53,9 +44,13 @@ function verifySignature(
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -86,11 +81,14 @@ X-Signature: {HMAC-SHA256 signature of request body}
 ```
 
 **n8n Action:**
+- n8n automatically verifies JWT token (no Code node needed!)
+- Access payload from `$json.jwtPayload`
 - Use provided Spotify credentials to authenticate
 - Create a collaborative playlist named `"Rockola - {venueName}"`
 - Make it collaborative (so venue owner can join)
 - Return playlist ID and URL
 
+**Authentication:** JWT Auth (configured in webhook node)
 **Configurable in Superadmin UI:** ✅ Yes
 **Default in .env:** `N8N_WEBHOOK_CREATE_PLAYLIST_URL`
 
@@ -105,9 +103,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -202,9 +204,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -254,9 +260,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -315,9 +325,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -368,9 +382,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -412,9 +430,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -468,9 +490,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -506,9 +532,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -540,9 +570,13 @@ X-Signature: {HMAC-SHA256 signature of request body}
 **Request Headers:**
 ```
 Content-Type: application/json
-X-API-Key: {N8N_API_KEY}
-X-Signature: {HMAC-SHA256 signature of request body}
+Authorization: Bearer {JWT_TOKEN}
 ```
+
+**JWT Token contains:**
+- Webhook payload as claims
+- `iat` (issued at timestamp)
+- `exp` (expires in 5 minutes)
 
 **Request Body:**
 ```json
@@ -586,8 +620,8 @@ N8N_WEBHOOK_ADD_SONG_TO_QUEUE_URL=${N8N_WEBHOOK_URL}/add-song-to-queue
 N8N_WEBHOOK_SKIP_TRACK_URL=${N8N_WEBHOOK_URL}/skip-track
 
 # Security
-N8N_API_KEY=your-api-key-here
 N8N_WEBHOOK_SECRET=your-shared-secret-for-signing
+# Note: Only N8N_WEBHOOK_SECRET needed (used for JWT signing)
 ```
 
 ---
@@ -598,7 +632,7 @@ Superadmins can configure:
 1. **Default Spotify credentials** (used for Playlist Mode)
 2. **Per-venue Spotify credentials** (override for specific venues)
 3. **Individual webhook URLs** (override defaults from .env)
-4. **N8N API key and secret** (for webhook security)
+4. **N8N webhook secret** (for JWT signing)
 
 **UI Location:** Superadmin Dashboard → Settings → N8N Configuration
 
@@ -607,7 +641,7 @@ Superadmins can configure:
 ## 📝 Implementation Notes
 
 1. **Webhook URLs are configurable** - Defaults in `.env`, but superadmin can override
-2. **All webhooks use same security** - API key + HMAC-SHA256 signature
+2. **All webhooks use JWT authentication** - JWT token with `N8N_WEBHOOK_SECRET`
 3. **Error handling** - All webhooks should handle timeouts and retries
 4. **Logging** - Log all webhook calls for debugging
 5. **Rate limiting** - n8n should handle rate limits gracefully

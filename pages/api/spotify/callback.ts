@@ -3,6 +3,7 @@ import { ApiError } from 'lib/errors';
 import { updateVenue, getVenueById } from 'models/venue';
 import { recordMetric } from 'lib/metrics';
 import env from 'lib/env';
+import { logger } from 'lib/logger';
 
 export default async function handler(
   req: NextApiRequest,
@@ -123,46 +124,71 @@ export default async function handler(
       },
     };
 
-    console.log('=== N8N PAYLOAD DEBUG ===');
-    console.log('Payload:', JSON.stringify(n8nPayload, null, 2));
-    console.log('=========================');
-
-    const n8nResponse = await fetch(env.n8n.webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(n8nPayload), // Send as single object
+    // Call n8n webhook to create Spotify OAuth credential for automation workflows
+    // This is optional - Spotify tokens are still saved to the venue regardless
+    const createCredentialUrl = env.n8n.webhooks.createSpotifyCredential;
+    
+    logger.info('Attempting to create n8n Spotify credential', {
+      type: 'spotify_oauth_callback',
+      venueId,
+      venueName: venue.name,
+      webhookUrl: createCredentialUrl,
     });
 
-    console.log('=== N8N RESPONSE DEBUG ===');
-    console.log('Status:', n8nResponse.status);
-    console.log('Status Text:', n8nResponse.statusText);
-    console.log('==========================');
-
-    if (!n8nResponse.ok) {
-      const errorData = await n8nResponse.json().catch(() => ({}));
-      throw new ApiError(
-        n8nResponse.status,
-        `Failed to create n8n credential: ${errorData.message || n8nResponse.statusText}`
-      );
-    }
-
-    let n8nResult: any = {};
     let n8nCredentialId: string | undefined;
 
     try {
-      const responseText = await n8nResponse.text();
-      console.log('N8N Response Text:', responseText);
-      
-      if (responseText) {
-        n8nResult = JSON.parse(responseText);
-        n8nCredentialId = n8nResult.credentialId || n8nResult.id;
+      const n8nResponse = await fetch(createCredentialUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(n8nPayload),
+      });
+
+      logger.info('N8N webhook response received', {
+        type: 'n8n_webhook_response',
+        status: n8nResponse.status,
+        statusText: n8nResponse.statusText,
+      });
+
+      if (!n8nResponse.ok) {
+        const errorData = await n8nResponse.json().catch(() => ({}));
+        logger.error('Failed to create n8n credential', {
+          type: 'n8n_credential_creation_failed',
+          venueId,
+          status: n8nResponse.status,
+          error: errorData.message || n8nResponse.statusText,
+          webhookUrl: createCredentialUrl,
+        });
+        // Don't throw error - continue without n8n credential
+        // The Spotify connection will still work, just without n8n integration
+      } else {
+        try {
+          const responseText = await n8nResponse.text();
+          if (responseText) {
+            const n8nResult = JSON.parse(responseText);
+            n8nCredentialId = n8nResult.credentialId || n8nResult.id;
+            
+            logger.info('N8N credential created successfully', {
+              type: 'n8n_credential_created',
+              venueId,
+              credentialId: n8nCredentialId,
+            });
+          }
+        } catch (parseError: any) {
+          logger.error('Failed to parse n8n response', {
+            type: 'n8n_parse_error',
+            error: parseError.message,
+          });
+        }
       }
-      
-      console.log('N8N Credential ID:', n8nCredentialId);
-    } catch (parseError: any) {
-      console.error('Failed to parse n8n response:', parseError.message);
-      // Continue without n8n credential ID
-      n8nCredentialId = undefined;
+    } catch (n8nError: any) {
+      logger.error('Error calling n8n webhook', {
+        type: 'n8n_webhook_error',
+        venueId,
+        error: n8nError.message,
+        stack: n8nError.stack,
+      });
+      // Continue without n8n credential - Spotify connection will still work
     }
 
     // Update venue with Spotify credentials
@@ -177,11 +203,25 @@ export default async function handler(
 
     recordMetric('venue.spotify.connected');
 
+    logger.info('Spotify connection successful', {
+      type: 'spotify_connected',
+      venueId,
+      spotifyUserId,
+      hasN8nCredential: Boolean(n8nCredentialId),
+    });
+
     // Redirect back to venues page
     res.redirect(`/venues?success=spotify-connected`);
   } catch (error: any) {
     const message = error.message || 'Something went wrong';
-    console.error('Spotify callback error:', error);
+    
+    logger.error('Spotify callback error', {
+      type: 'spotify_callback_error',
+      error: message,
+      stack: error.stack,
+      status: error.status || 500,
+    });
+    
     // Redirect with error message
     res.redirect(`/venues?error=${encodeURIComponent(message)}`);
   }

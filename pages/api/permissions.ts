@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from '@/lib/session';
+import { throwIfNoUserAccess } from 'models/user';
 import { permissions } from '@/lib/permissions';
-import { getUser } from 'models/user';
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,21 +13,8 @@ export default async function handler(
   }
 
   try {
-    const session = await getSession(req, res);
-
-    if (!session || !session.user) {
-      return res.status(401).json({
-        error: { message: 'Unauthorized' },
-      });
-    }
-
-    const user = await getUser({ id: session.user.id });
-
-    if (!user) {
-      return res.status(401).json({
-        error: { message: 'Unauthorized' },
-      });
-    }
+    // This function already supports both API keys and sessions
+    const user = await throwIfNoUserAccess(req, res);
 
     const userPermissions = permissions[user.role] || [];
 
@@ -36,7 +22,8 @@ export default async function handler(
       data: userPermissions,
     });
   } catch (error: any) {
-    return res.status(500).json({
+    const status = error.status || 500;
+    return res.status(status).json({
       error: { message: error.message || 'Internal server error' },
     });
   }

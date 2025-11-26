@@ -131,9 +131,9 @@ const env = {
 
   n8n: {
     webhookUrl: process.env.N8N_WEBHOOK_URL || '',
-    apiKey: process.env.N8N_API_KEY || '',
     webhookSecret: process.env.N8N_WEBHOOK_SECRET || '',
     webhooks: {
+      createSpotifyCredential: process.env.N8N_WEBHOOK_CREATE_SPOTIFY_CREDENTIAL_URL || `${process.env.N8N_WEBHOOK_URL || ''}/create-spotify-credential`,
       createPlaylist: process.env.N8N_WEBHOOK_CREATE_PLAYLIST_URL || `${process.env.N8N_WEBHOOK_URL || ''}/create-playlist`,
       validateRules: process.env.N8N_WEBHOOK_VALIDATE_RULES_URL || `${process.env.N8N_WEBHOOK_URL || ''}/validate-rules`,
       addSongToPlaylist: process.env.N8N_WEBHOOK_ADD_SONG_TO_PLAYLIST_URL || `${process.env.N8N_WEBHOOK_URL || ''}/add-song-to-playlist`,

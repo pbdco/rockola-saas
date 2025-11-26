@@ -3,6 +3,9 @@ import { Prisma, Venue, VenueMode } from '@prisma/client';
 import { ApiError } from '@/lib/errors';
 import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/server-common';
+import { createPlaylist } from '@/lib/n8n-webhooks';
+import env from '@/lib/env';
+import { logger } from '@/lib/logger';
 
 export type SerializedVenue = Omit<Venue, 'pricePerSong'> & {
   pricePerSong: number | null;
@@ -131,6 +134,81 @@ export const createVenue = async (
     },
   });
 
+  // Auto-create playlist for Playlist Mode venues (only if playlist doesn't exist)
+  // For new venues, spotifyPlaylistId will be null, so we can safely create
+  if (venue.mode === 'PLAYLIST') {
+    // Fetch the venue again to check if playlist already exists
+    const venueCheck = await prisma.venue.findUnique({
+      where: { id: venue.id },
+    });
+
+    // Only create playlist if it doesn't exist
+    // Type assertion needed because Prisma types may not be fully updated
+    const hasPlaylist = (venueCheck as any)?.spotifyPlaylistId;
+    if (!hasPlaylist) {
+      try {
+      // Use default Spotify credentials for Playlist Mode
+      const spotifyClientId = env.spotify.defaultClientId;
+      const spotifyClientSecret = env.spotify.defaultClientSecret;
+
+      if (!spotifyClientId || !spotifyClientSecret) {
+        logger.warn('Cannot create playlist: Default Spotify credentials not configured', {
+          type: 'playlist_creation_skipped',
+          venueId: venue.id,
+          venueName: venue.name,
+        });
+      } else {
+        const playlistResult = await createPlaylist(
+          venue.id,
+          venue.name,
+          spotifyClientId,
+          spotifyClientSecret
+        );
+
+        if (playlistResult.success && playlistResult.playlistId) {
+          // Update venue with playlist information
+          // Type assertion needed because Prisma types may not be fully updated
+          const updatedVenue = await prisma.venue.update({
+            where: { id: venue.id },
+            data: {
+              spotifyPlaylistId: playlistResult.playlistId,
+              spotifyPlaylistUrl: playlistResult.playlistUrl || null,
+            } as any,
+          });
+
+          logger.info('Playlist created successfully for venue', {
+            type: 'playlist_creation_success',
+            venueId: venue.id,
+            playlistId: playlistResult.playlistId,
+            playlistUrl: playlistResult.playlistUrl,
+          });
+
+          // Return updated venue with playlist info
+          return serializeVenue(updatedVenue);
+        } else {
+          logger.error('Failed to create playlist for venue', {
+            type: 'playlist_creation_failed',
+            venueId: venue.id,
+            venueName: venue.name,
+            error: playlistResult.error,
+          });
+          // Continue - don't fail venue creation if playlist creation fails
+        }
+      }
+    } catch (error: any) {
+      // Log error but don't fail venue creation
+      logger.error('Error creating playlist for venue', {
+        type: 'playlist_creation_error',
+        venueId: venue.id,
+        venueName: venue.name,
+        error: error.message,
+        stack: error.stack,
+      });
+      // Continue - venue is created, playlist can be created later
+      }
+    }
+  }
+
   return serializeVenue(venue);
 };
 
@@ -179,13 +257,15 @@ export const updateVenue = async (
     finalSlug = await generateUniqueSlug(baseSlug, id);
   }
 
+  const finalMode = data.mode ?? existing.mode;
+
   const updated = await prisma.venue.update({
     where: { id },
     data: {
       name: data.name ?? existing.name,
       slug: finalSlug,
       address: data.address ?? existing.address,
-      mode: data.mode ?? existing.mode,
+      mode: finalMode,
       pricingEnabled: finalPricingEnabled,
       pricePerSong: finalPricingEnabled
         ? typeof data.pricePerSong === 'number'
@@ -208,6 +288,71 @@ export const updateVenue = async (
       n8nCredentialId: data.n8nCredentialId ?? existing.n8nCredentialId,
     },
   });
+
+  // Auto-create playlist if mode changed to PLAYLIST and playlist doesn't exist
+  // Type assertion needed because Prisma types may not be fully updated
+  const hasPlaylist = (updated as any)?.spotifyPlaylistId;
+  if (finalMode === 'PLAYLIST' && !hasPlaylist) {
+    try {
+      // Use default Spotify credentials for Playlist Mode
+      const spotifyClientId = env.spotify.defaultClientId;
+      const spotifyClientSecret = env.spotify.defaultClientSecret;
+
+      if (!spotifyClientId || !spotifyClientSecret) {
+        logger.warn('Cannot create playlist: Default Spotify credentials not configured', {
+          type: 'playlist_creation_skipped',
+          venueId: updated.id,
+          venueName: updated.name,
+        });
+      } else {
+        const playlistResult = await createPlaylist(
+          updated.id,
+          updated.name,
+          spotifyClientId,
+          spotifyClientSecret
+        );
+
+        if (playlistResult.success && playlistResult.playlistId) {
+          // Update venue with playlist information
+          // Type assertion needed because Prisma types may not be fully updated
+          const venueWithPlaylist = await prisma.venue.update({
+            where: { id: updated.id },
+            data: {
+              spotifyPlaylistId: playlistResult.playlistId,
+              spotifyPlaylistUrl: playlistResult.playlistUrl || null,
+            } as any,
+          });
+
+          logger.info('Playlist created successfully for venue (via update)', {
+            type: 'playlist_creation_success',
+            venueId: updated.id,
+            playlistId: playlistResult.playlistId,
+            playlistUrl: playlistResult.playlistUrl,
+          });
+
+          return serializeVenue(venueWithPlaylist);
+        } else {
+          logger.error('Failed to create playlist for venue (via update)', {
+            type: 'playlist_creation_failed',
+            venueId: updated.id,
+            venueName: updated.name,
+            error: playlistResult.error,
+          });
+          // Continue - don't fail venue update if playlist creation fails
+        }
+      }
+    } catch (error: any) {
+      // Log error but don't fail venue update
+      logger.error('Error creating playlist for venue (via update)', {
+        type: 'playlist_creation_error',
+        venueId: updated.id,
+        venueName: updated.name,
+        error: error.message,
+        stack: error.stack,
+      });
+      // Continue - venue is updated, playlist can be created later
+    }
+  }
 
   return serializeVenue(updated);
 };

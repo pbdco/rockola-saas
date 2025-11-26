@@ -87,11 +87,17 @@ const EditVenuePage: NextPageWithLayout = () => {
       </div>
 
       <div className="max-w-4xl">
-        {/* Spotify Connection Section */}
-        <div className="mb-8 p-6 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4">{t('spotify-integration')}</h2>
-          <SpotifyConnect venue={venue} />
-        </div>
+        {/* Spotify Connection Section - Only show for AUTOMATION mode */}
+        {/* PLAYLIST mode uses default Spotify credentials, no connection needed */}
+        {venue.mode && venue.mode.toUpperCase() !== 'PLAYLIST' && (
+          <div className="mb-8 p-6 rounded-lg border">
+            <h2 className="text-xl font-semibold mb-4">{t('spotify-configuration')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('spotify-configuration-description-automation')}
+            </p>
+            <SpotifyConnect venue={venue} />
+          </div>
+        )}
 
         {/* Edit Venue Form */}
         <div className="p-6 rounded-lg border">

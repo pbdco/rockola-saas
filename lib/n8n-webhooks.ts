@@ -4,7 +4,7 @@
  * Includes comprehensive logging and error handling
  */
 
-import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import env from './env';
 import { logger } from './logger';
 
@@ -16,11 +16,22 @@ interface N8NWebhookResponse<T = any> {
 }
 
 /**
- * Calculate HMAC-SHA256 signature for webhook security
+ * Generate JWT token for n8n webhook authentication
+ * Uses JWT with HS256 (HMAC-SHA256) algorithm
+ * Payload contains webhook data, automatically verified by n8n
  */
-function calculateSignature(body: string, secret: string): string {
-  const hmac = crypto.createHmac('sha256', secret);
-  return hmac.update(body).digest('hex');
+function generateJWT(body: any, secret: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  
+  // JWT payload contains the webhook data as claims
+  const payload = {
+    ...body,
+    iat: now, // Issued at
+    exp: now + (5 * 60), // Expires in 5 minutes (prevents replay attacks)
+  };
+  
+  // Sign with HS256 (HMAC-SHA256) - same algorithm n8n uses
+  return jwt.sign(payload, secret, { algorithm: 'HS256' });
 }
 
 /**
@@ -32,13 +43,26 @@ async function callN8NWebhook<T = any>(
   body: any
 ): Promise<N8NWebhookResponse<T>> {
   const startTime = Date.now();
-  const bodyString = JSON.stringify(body);
-  const signature = calculateSignature(bodyString, env.n8n.webhookSecret);
-
+  
+  // Validate webhook secret is configured
+  if (!env.n8n.webhookSecret) {
+    logger.error('N8N_WEBHOOK_SECRET not configured', {
+      type: 'n8n_webhook_error',
+      error: 'N8N_WEBHOOK_SECRET must be set in .env',
+    });
+    return {
+      success: false,
+      error: 'N8N_WEBHOOK_SECRET not configured. Please set it in .env file.',
+    };
+  }
+  
+  // Generate JWT token with webhook payload
+  // n8n will automatically verify the JWT signature and expiration
+  const token = generateJWT(body, env.n8n.webhookSecret);
+  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-API-Key': env.n8n.apiKey,
-    'X-Signature': signature,
+    'Authorization': `Bearer ${token}`,
   };
 
   try {
@@ -48,10 +72,12 @@ async function callN8NWebhook<T = any>(
       url,
     });
 
+    // With JWT, we don't send body separately - payload is in JWT token
+    // But n8n might still expect body, so we'll send both for compatibility
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: bodyString,
+      body: JSON.stringify(body), // Send body for n8n to access via $json.body
     });
 
     const responseTime = Date.now() - startTime;
@@ -124,29 +150,48 @@ export async function createPlaylist(
     venueName,
   });
 
-  const response = await callN8NWebhook<{
-    playlistId: string;
-    playlistUrl: string;
-    playlistName: string;
-  }>('create-playlist', env.n8n.webhooks.createPlaylist, {
+  // n8n returns the raw Spotify API response, so we need to handle both formats:
+  // 1. Formatted response: { playlistId, playlistUrl, playlistName }
+  // 2. Raw Spotify API response: { id, external_urls: { spotify }, name, ... }
+  const response = await callN8NWebhook<any>('create-playlist', env.n8n.webhooks.createPlaylist, {
     venueId,
     venueName,
     spotifyClientId,
     spotifyClientSecret,
   });
 
-  if (response.success && response.playlistId) {
-    logger.venueOperation('playlist_created', venueId, 'PLAYLIST', {
-      playlistId: response.playlistId,
-      playlistUrl: response.playlistUrl,
-    });
+  if (response.success) {
+    // Handle formatted response (if n8n formats it)
+    let playlistId: string | undefined;
+    let playlistUrl: string | undefined;
+    let playlistName: string | undefined;
 
-    return {
-      success: true,
-      playlistId: response.playlistId,
-      playlistUrl: response.playlistUrl,
-      playlistName: response.playlistName,
-    };
+    if (response.playlistId) {
+      // Formatted response format
+      playlistId = response.playlistId;
+      playlistUrl = response.playlistUrl;
+      playlistName = response.playlistName;
+    } else if (response.id) {
+      // Raw Spotify API response format
+      playlistId = response.id;
+      playlistUrl = response.external_urls?.spotify || response.href;
+      playlistName = response.name;
+    }
+
+    if (playlistId) {
+      logger.venueOperation('playlist_created', venueId, 'PLAYLIST', {
+        playlistId,
+        playlistUrl,
+        playlistName,
+      });
+
+      return {
+        success: true,
+        playlistId,
+        playlistUrl: playlistUrl || undefined,
+        playlistName: playlistName || undefined,
+      };
+    }
   }
 
   return {
